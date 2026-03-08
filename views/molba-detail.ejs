@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Систем за електронско поднесување молби</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="animated-bg"></div>
+  <div class="header-wrap">
+    <div class="header-top"></div>
+    <header class="header">
+      <div class="header-container">
+        <a href="/dashboard" class="logo">
+          <img src="/images/logo-feit-header.png" alt="УКИМ — ФЕИТ" class="header-logo-wide">
+        </a>
+        <nav>
+          <span class="nav-user"><%= studentName %></span>
+          <a href="/logout" class="nav-link btn-logout">Одјава</a>
+        </nav>
+      </div>
+    </header>
+  </div>
+
+  <main class="container">
+    <% if (success && success.length > 0) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+    <% if (error && error.length > 0) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="detail-card">
+      <div class="detail-header">
+        <h2>Молба #<%= molba.molbaId %></h2>
+        <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
+          <%= molba.status %>
+        </span>
+      </div>
+
+      <div class="detail-info">
+        <div class="detail-row">
+          <strong>Датум на поднесување:</strong>
+          <span><%= molba.datum %></span>
+        </div>
+        <div class="detail-row">
+          <strong>Статус:</strong>
+          <span><%= molba.status %></span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3>Опис на молбата</h3>
+        <p class="detail-text"><%= molba.description %></p>
+      </div>
+
+      <% if (molba.feedback) { %>
+        <div class="detail-section feedback-section <%= molba.status === 'Одбиена' ? 'feedback-rejected' : 'feedback-approved' %>">
+          <h3><%= molba.status === 'Одбиена' ? '❌ Причина за одбивање' : '✅ Повратна информација' %></h3>
+          <p class="detail-text"><%= molba.feedback %></p>
+        </div>
+      <% } %>
+
+      <div class="detail-actions">
+        <a href="/dashboard" class="btn btn-secondary">← Назад кон Dashboard</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="https://feit.ukim.edu.mk" target="_blank">ФЕИТ</a>
+        <a href="https://www.iknow.ukim.mk" target="_blank">iKnow</a>
+        <a href="https://e-kursevi.feit.ukim.edu.mk" target="_blank">е-Курсеви</a>
+        <a href="mailto:studentska@feit.ukim.edu.mk">Контакт</a>
+      </div>
+      <div class="footer-copy">
+        &copy; 2026 ФЕИТ — Студентска Служба. Сите права задржани.
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

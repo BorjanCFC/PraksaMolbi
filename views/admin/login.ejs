@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Студентска Служба - Најава</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="login-wrapper admin-login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <h1>🏛️</h1>
+        <h2>Студентска Служба</h2>
+        <p>Администраторски панел</p>
+      </div>
+
+      <% if (error && error.length > 0) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+      <% if (success && success.length > 0) { %>
+        <div class="alert alert-success"><%= success %></div>
+      <% } %>
+
+      <form action="/admin/login" method="POST" class="login-form">
+        <div class="form-group">
+          <label for="email">Email адреса</label>
+          <input type="email" id="email" name="email" placeholder="admin@university.mk" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Лозинка</label>
+          <input type="password" id="password" name="password" placeholder="Внесете лозинка" required>
+        </div>
+        <button type="submit" class="btn btn-admin btn-full">Најави се</button>
+      </form>
+
+      <div class="login-footer">
+        <a href="/login">← Најава за студенти</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

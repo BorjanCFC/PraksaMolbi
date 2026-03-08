@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Систем за електронско поднесување молби</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="login-wrapper">
+    <!-- Floating animated shapes -->
+    <div class="floating-shapes">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+
+    <!-- Lightning bolts -->
+    <div class="lightning-bolts">
+      <div class="lightning-bolt"><svg viewBox="0 0 40 80" fill="none"><polygon points="22,0 8,35 18,35 10,80 35,30 24,30 32,0" fill="rgba(255,220,100,0.7)"/></svg></div>
+      <div class="lightning-bolt"><svg viewBox="0 0 40 80" fill="none"><polygon points="22,0 8,35 18,35 10,80 35,30 24,30 32,0" fill="rgba(180,210,255,0.6)"/></svg></div>
+      <div class="lightning-bolt"><svg viewBox="0 0 40 80" fill="none"><polygon points="22,0 8,35 18,35 10,80 35,30 24,30 32,0" fill="rgba(255,220,100,0.5)"/></svg></div>
+      <div class="lightning-bolt"><svg viewBox="0 0 40 80" fill="none"><polygon points="22,0 8,35 18,35 10,80 35,30 24,30 32,0" fill="rgba(180,210,255,0.5)"/></svg></div>
+      <div class="lightning-bolt"><svg viewBox="0 0 40 80" fill="none"><polygon points="22,0 8,35 18,35 10,80 35,30 24,30 32,0" fill="rgba(255,220,100,0.6)"/></svg></div>
+      <div class="lightning-bolt"><svg viewBox="0 0 40 80" fill="none"><polygon points="22,0 8,35 18,35 10,80 35,30 24,30 32,0" fill="rgba(180,210,255,0.4)"/></svg></div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-header">
+        <img src="/images/logo-feit-header.png" alt="УКИМ — ФЕИТ" class="login-logo-wide">
+        <div class="login-divider"></div>
+        <h2>Систем за електронско поднесување молби</h2>
+      </div>
+
+      <% if (error && error.length > 0) { %>
+        <div class="alert alert-error">
+          ⚠️ <%= error %>
+        </div>
+      <% } %>
+
+      <% if (success && success.length > 0) { %>
+        <div class="alert alert-success">
+          ✅ <%= success %>
+        </div>
+      <% } %>
+
+      <form action="/login" method="POST" class="login-form">
+        <div class="form-group">
+          <label for="email">Email адреса</label>
+          <input type="email" id="email" name="email" placeholder="student@university.mk" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Лозинка</label>
+          <input type="password" id="password" name="password" placeholder="Внесете лозинка" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">Најави се</button>
+      </form>
+
+      <div class="login-footer">
+        <a href="https://feit.ukim.edu.mk" target="_blank">feit.ukim.edu.mk</a>
+        <span class="login-footer-sep">|</span>
+        <a href="https://www.iknow.ukim.mk" target="_blank">iknow.ukim.mk</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
