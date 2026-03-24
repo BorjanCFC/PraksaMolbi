@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Систем за електронско поднесување молби</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+    <%- include('partials/header', { isAdmin: true, adminName }) %>
+  <% } else { %>
+    <%- include('partials/header', { student }) %>
+  <% } %>
+
+  <main class="container">
+    <% if (success && success.length > 0) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+    <% if (error && error.length > 0) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+      <div class="dashboard-header">
+        <div>
+          <h2>Сите молби</h2>
+          <p class="subtitle">Преглед и управување со молби од студенти</p>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number"><%= stats.vkupno %></div>
+          <div class="stat-label">Вкупно молби</div>
+        </div>
+        <div class="stat-card stat-proces">
+          <div class="stat-number"><%= stats.voProces %></div>
+          <div class="stat-label">Во процес</div>
+        </div>
+        <div class="stat-card stat-odobrena">
+          <div class="stat-number"><%= stats.odobreni %></div>
+          <div class="stat-label">Одобрени</div>
+        </div>
+        <div class="stat-card stat-odbiena">
+          <div class="stat-number"><%= stats.odbieni %></div>
+          <div class="stat-label">Одбиени</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label for="statusFilter">Статус:</label>
+          <select id="statusFilter" class="form-select filter-select">
+            <option value="site" <%= currentStatus === 'site' ? 'selected' : '' %>>Сите</option>
+            <option value="Во процес" <%= currentStatus === 'Во процес' ? 'selected' : '' %>>Во процес</option>
+            <option value="Одобрена" <%= currentStatus === 'Одобрена' ? 'selected' : '' %>>Одобрена</option>
+            <option value="Одбиена" <%= currentStatus === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="studentFilter">Студент:</label>
+          <select id="studentFilter" class="form-select filter-select">
+            <option value="site" <%= currentStudentId === 'site' ? 'selected' : '' %>>Сите студенти</option>
+            <% studenti.forEach(s => { %>
+              <option value="<%= s.studentId %>" <%= currentStudentId == s.studentId ? 'selected' : '' %>><%= s.ime %> <%= s.prezime %> (<%= s.brIndeks %>)</option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <script>
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('studentFilter').addEventListener('change', applyFilters);
+        function applyFilters() {
+          const status = document.getElementById('statusFilter').value;
+          const studentId = document.getElementById('studentFilter').value;
+          window.location.href = '/dashboard?status=' + encodeURIComponent(status) + '&studentId=' + encodeURIComponent(studentId);
+        }
+      </script>
+
+      <% if (molbi.length === 0) { %>
+        <div class="empty-state">
+          <h3>Нема поднесени молби</h3>
+          <p>Моментално нема молби од студенти.</p>
+        </div>
+      <% } else { %>
+        <div class="table-wrapper">
+          <table class="molbi-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Студент</th>
+                <th>Бр. индекс</th>
+                <th>Наслов</th>
+                <th>Датум</th>
+                <th>Статус</th>
+                <th>Акции</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% molbi.forEach((molba) => { %>
+                <tr>
+                  <td><%= molba.molbaId %></td>
+                  <td><%= molba.student.ime %> <%= molba.student.prezime %></td>
+                  <td><%= molba.student.brIndeks %></td>
+                  <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 80) %><%= (molba.naslov || '').length > 80 ? '...' : '' %></td>
+                  <td><%= molba.datum %></td>
+                  <td>
+                    <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
+                      <%= molba.status %>
+                    </span>
+                  </td>
+                  <td>
+                    <a href="/admin/molba/<%= molba.molbaId %>" class="btn btn-small">Детали</a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+
+    <% } else { %>
+      <div class="dashboard-header">
+        <div>
+          <h2>Мои молби</h2>
+          <p class="subtitle">Преглед на сите испратени молби до студентска служба</p>
+        </div>
+        <a href="/dashboard/nova-molba" class="btn btn-primary">+ Нова молба</a>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number"><%= siteMolbi.length %></div>
+          <div class="stat-label">Вкупно молби</div>
+        </div>
+        <div class="stat-card stat-proces">
+          <div class="stat-number"><%= siteMolbi.filter(m => m.status === 'Во процес').length %></div>
+          <div class="stat-label">Во процес</div>
+        </div>
+        <div class="stat-card stat-odobrena">
+          <div class="stat-number"><%= siteMolbi.filter(m => m.status === 'Одобрена').length %></div>
+          <div class="stat-label">Одобрени</div>
+        </div>
+        <div class="stat-card stat-odbiena">
+          <div class="stat-number"><%= siteMolbi.filter(m => m.status === 'Одбиена').length %></div>
+          <div class="stat-label">Одбиени</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <label for="statusFilter">Филтрирај по статус:</label>
+        <select id="statusFilter" class="form-select filter-select" onchange="window.location.href='/dashboard?status='+this.value">
+          <option value="site" <%= currentStatus === 'site' ? 'selected' : '' %>>Сите</option>
+          <option value="Во процес" <%= currentStatus === 'Во процес' ? 'selected' : '' %>>Во процес</option>
+          <option value="Одобрена" <%= currentStatus === 'Одобрена' ? 'selected' : '' %>>Одобрена</option>
+          <option value="Одбиена" <%= currentStatus === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
+        </select>
+      </div>
+
+      <% if (molbi.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <h3>Немате испратено молби</h3>
+          <p>Кликнете на "Нова молба" за да испратите молба до студентска служба.</p>
+        </div>
+      <% } else { %>
+        <div class="table-wrapper">
+          <table class="molbi-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Наслов</th>
+                <th>Датум</th>
+                <th>Статус</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% molbi.forEach((molba, index) => { %>
+                <tr>
+                  <td><%= index + 1 %></td>
+                  <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 80) %><%= (molba.naslov || '').length > 80 ? '...' : '' %></td>
+                  <td><%= molba.datum %></td>
+                  <td>
+                    <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
+                      <%= molba.status %>
+                    </span>
+                  </td>
+                  <td>
+                    <a href="/dashboard/molba/<%= molba.molbaId %>" class="btn btn-small">Детали</a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    <% } %>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Систем за електронско поднесување молби</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header', { isAdmin: false, student: { ime: studentName, prezime: '', brIndeks: '' }, studentName }) %>
+
+  <main class="container">
+    <div class="form-card">
+      <h2>Нова молба</h2>
+      <p class="subtitle">Пополнете го формуларот за да испратите молба до студентска служба</p>
+
+      <% if (error && error.length > 0) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form action="/dashboard/nova-molba" method="POST">
+        <div class="form-group">
+          <label for="naslov">Наслов на молбата</label>
+          <input id="naslov" name="naslov" type="text" maxlength="150" placeholder="Пр. Молба за 36 кредити" required>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Опис на молбата</label>
+          <textarea id="description" name="description" rows="6" placeholder="Внесете детален опис на вашата молба..." required></textarea>
+        </div>
+
+        <div class="form-actions">
+          <a href="/dashboard" class="btn btn-secondary">Откажи</a>
+          <button type="submit" class="btn btn-primary">Испрати молба</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

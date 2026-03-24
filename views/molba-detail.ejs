@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Систем за електронско поднесување молби</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+    <%- include('partials/header', { isAdmin: true, adminName }) %>
+  <% } else { %>
+    <%- include('partials/header', { isAdmin: false, student: { ime: studentName, prezime: '', brIndeks: '' }, studentName }) %>
+  <% } %>
+
+  <main class="container">
+    <% if (success && success.length > 0) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+    <% if (error && error.length > 0) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="detail-card">
+      <div class="detail-header">
+        <h2>Молба #<%= molba.molbaId %></h2>
+        <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
+          <%= molba.status %>
+        </span>
+      </div>
+
+      <div class="detail-info">
+        <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+          <div class="detail-row">
+            <strong>Студент:</strong>
+            <span><%= molba.student.ime %> <%= molba.student.prezime %></span>
+          </div>
+          <div class="detail-row">
+            <strong>Број на индекс:</strong>
+            <span><%= molba.student.brIndeks %></span>
+          </div>
+          <div class="detail-row">
+            <strong>Email:</strong>
+            <span><%= molba.student.email %></span>
+          </div>
+        <% } %>
+        <div class="detail-row">
+          <strong>Датум на поднесување:</strong>
+          <span><%= molba.datum %></span>
+        </div>
+        <div class="detail-row">
+          <strong><% if (typeof isAdmin !== 'undefined' && isAdmin) { %>Тековен статус<% } else { %>Статус<% } %>:</strong>
+          <span><%= molba.status %></span>
+        </div>
+        <div class="detail-row">
+          <strong>Наслов:</strong>
+          <span><%= molba.naslov || 'Без наслов' %></span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3>Опис на молбата</h3>
+        <div class="detail-text detail-description-full"><%= molba.description %></div>
+      </div>
+
+      <% if (molba.feedback) { %>
+        <div class="detail-section feedback-section <%= molba.status === 'Одбиена' ? 'feedback-rejected' : 'feedback-approved' %>">
+          <h3><% if (typeof isAdmin !== 'undefined' && isAdmin) { %>Постоечки фидбек<% } else { %><%= molba.status === 'Одбиена' ? '❌ Причина за одбивање' : '✅ Повратна информација' %><% } %></h3>
+          <p class="detail-text"><%= molba.feedback %></p>
+        </div>
+      <% } %>
+
+      <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+        <div class="admin-action-card">
+          <h3>Ажурирај статус</h3>
+          <form action="/admin/molba/<%= molba.molbaId %>/status" method="POST">
+            <div class="form-group">
+              <label for="status">Нов статус</label>
+              <select id="status" name="status" class="form-select" required>
+                <option value="Во процес" <%= molba.status === 'Во процес' ? 'selected' : '' %>>Во процес</option>
+                <option value="Одобрена" <%= molba.status === 'Одобрена' ? 'selected' : '' %>>Одобрена</option>
+                <option value="Одбиена" <%= molba.status === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="feedback">Повратна информација (опционално)</label>
+              <textarea id="feedback" name="feedback" rows="4" placeholder="Внесете причина за одбивање или друга повратна информација..."><%= molba.feedback || '' %></textarea>
+            </div>
+            <div class="form-actions">
+              <a href="/dashboard" class="btn btn-secondary">← Назад</a>
+              <button type="submit" class="btn btn-admin">Ажурирај статус</button>
+            </div>
+          </form>
+        </div>
+      <% } else { %>
+        <div class="detail-actions">
+          <a href="/dashboard" class="btn btn-secondary">← Назад кон Dashboard</a>
+        </div>
+      <% } %>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<div class="animated-bg"></div>
+<div class="header-wrap">
+  <div class="header-top"></div>
+  <header class="header">
+    <div class="header-container">
+      <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+        <a href="/dashboard" class="logo">
+          <img src="/images/logo-feit-header.png" alt="УКИМ — ФЕИТ" class="header-logo-wide">
+        </a>
+        <nav>
+          <span class="nav-user"><%= adminName %></span>
+          <a href="/logout" class="nav-link btn-logout">Одјава</a>
+        </nav>
+      <% } else { %>
+        <a href="/dashboard" class="logo">
+          <img src="/images/logo-feit-header.png" alt="УКИМ — ФЕИТ" class="header-logo-wide">
+        </a>
+        <nav>
+          <% if (student && student.brIndeks) { %>
+            <span class="nav-user"><%= student.ime %> <%= student.prezime %> (<%= student.brIndeks %>)</span>
+          <% } else if (studentName) { %>
+            <span class="nav-user"><%= studentName %></span>
+          <% } %>
+          <a href="/logout" class="nav-link btn-logout">Одјава</a>
+        </nav>
+      <% } %>
+    </div>
+  </header>
+</div>

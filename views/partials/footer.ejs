@@ -1,0 +1,36 @@
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="https://feit.ukim.edu.mk">ФЕИТ</a>
+      <a href="https://www.iknow.ukim.mk">iKnow</a>
+      <a href="https://e-kursevi.feit.ukim.edu.mk"">е-Курсеви</a>
+      <a href="https://smail.feit.ukim.edu.mk/">sMail</a>
+    </div>
+    <div class="footer-copy">
+      &copy; 2026 ФЕИТ — Студентска Служба. Сите права задржани.
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    const alerts = document.querySelectorAll('.alert');
+    if (!alerts || alerts.length === 0) return;
+
+    alerts.forEach((alertEl) => {
+      setTimeout(() => {
+        alertEl.style.transition = 'opacity 0.45s ease, transform 0.45s ease, margin 0.45s ease';
+        alertEl.style.opacity = '0';
+        alertEl.style.transform = 'translateY(-8px)';
+        alertEl.style.marginTop = '0';
+        alertEl.style.marginBottom = '0';
+
+        setTimeout(() => {
+          if (alertEl && alertEl.parentNode) {
+            alertEl.parentNode.removeChild(alertEl);
+          }
+        }, 500);
+      }, 2500);
+    });
+  })();
+</script>
