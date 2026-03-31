@@ -31,17 +31,17 @@
 ## Технологии
 
 - Node.js: `v24.14.0`
-- Express: `^4.18.2`
-- Sequelize ORM: `^6.35.0`
-- Sequelize CLI: `^6.6.2`
-- PostgreSQL driver (`pg`): `^8.15.6`
-- EJS: `^3.1.9`
-- Multer: `^2.0.2`
-- bcryptjs: `^2.4.3`
-- dotenv: `^16.3.1`
-- express-session: `^1.17.3`
-- connect-flash: `^0.1.1`
-- nodemon (dev): `^3.0.2`
+- Express: `4.18.2`
+- Sequelize ORM: `6.35.0`
+- Sequelize CLI: `6.6.2`
+- PostgreSQL driver (`pg`): `8.15.6`
+- EJS: `3.1.9`
+- Multer: `2.0.2`
+- bcryptjs: `2.4.3`
+- dotenv: `16.3.1`
+- express-session: `1.17.3`
+- connect-flash: `0.1.1`
+- nodemon (dev): `3.0.2`
 - PostgreSQL сервер (барано): `18`
 
 ## Инсталација
