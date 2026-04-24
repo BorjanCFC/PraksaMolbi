@@ -176,6 +176,11 @@ nav {
   gap: 0.8rem;
 }
 
+.inline-form {
+  display: inline-flex;
+  margin: 0;
+}
+
 .nav-user {
   font-size: 0.85rem;
   font-weight: 600;
@@ -436,6 +441,46 @@ nav {
   margin: 0.8rem auto;
 }
 
+.auth-block {
+  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  border: 1px solid #d9e8f7;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.auth-block h3 {
+  color: var(--primary);
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.auth-help {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  margin-bottom: 0.8rem;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 0.8rem 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-divider span {
+  padding: 0 0.7rem;
+}
+
 /* ===== FORMS ===== */
 .form-group {
   margin-bottom: 1.5rem;
@@ -463,6 +508,13 @@ nav {
   background: var(--bg-card);
   color: var(--text);
   line-height: 1.5;
+}
+
+.help-text {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .form-group input:focus,
@@ -531,6 +583,18 @@ nav {
   background: linear-gradient(135deg, var(--primary-dark), var(--primary));
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 61, 122, 0.35);
+}
+
+.btn-microsoft {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+}
+
+.btn-microsoft:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
 }
 
 .btn-admin {
@@ -722,6 +786,14 @@ nav {
   gap: 0.5rem;
 }
 
+.takeover-search-form {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
 .filter-select {
   min-width: 180px;
   padding: 0.5rem 0.8rem;
@@ -737,6 +809,10 @@ nav {
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border);
   animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+
+.takeover-results-table {
+  margin-bottom: 1.5rem;
 }
 
 .molbi-table {
@@ -930,6 +1006,12 @@ nav {
   margin-bottom: 1.5rem;
 }
 
+.doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
 .detail-section h3 {
   color: var(--primary);
   margin-bottom: 0.8rem;
@@ -981,6 +1063,7 @@ nav {
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   margin-top: 2rem;
+  margin-bottom: 1rem;
   transition: var(--transition);
 }
 
@@ -993,6 +1076,10 @@ nav {
   color: var(--primary);
   margin-bottom: 1rem;
   font-weight: 700;
+}
+
+.detail-section.feedback-section {
+  margin-top: 1rem;
 }
 
 /* ===== LOGIN FOOTER ===== */

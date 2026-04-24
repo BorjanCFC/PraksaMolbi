@@ -5,6 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Систем за електронско поднесување молби</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .login-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .login-tab-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      background: transparent;
+      color: #666;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+
+    .login-tab-btn:hover {
+      color: #0066cc;
+      background-color: rgba(0, 102, 204, 0.05);
+    }
+
+    .login-tab-btn.active {
+      color: #0066cc;
+      border-bottom-color: #0066cc;
+    }
+
+    .login-tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .login-tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .tab-description {
+      text-align: center;
+      color: #666;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <div class="login-wrapper">
@@ -41,19 +100,51 @@
         </div>
       <% } %>
 
-      <form action="/login" method="POST" class="login-form">
-        <div class="form-group">
-          <label for="email">Email адреса</label>
-          <input type="email" id="email" name="email" placeholder="Внесете email адреса" required>
-        </div>
+      <!-- TABS -->
+      <div class="login-tabs">
+        <button class="login-tab-btn active" data-tab="student">
+          👤 Студент
+        </button>
+        <button class="login-tab-btn" data-tab="admin">
+          🔐 Админ/Служби
+        </button>
+      </div>
 
-        <div class="form-group">
-          <label for="password">Лозинка</label>
-          <input type="password" id="password" name="password" placeholder="Внесете лозинка" required>
+      <!-- STUDENT TAB -->
+      <div class="login-tab-content active" id="tab-student">
+        <div class="tab-description">
+          Најава со студентски Microsoft акаунт
         </div>
+        <% if (entraEnabled) { %>
+          <a href="/auth/microsoft" class="btn btn-microsoft btn-full">
+            🔵 Најава со Microsoft Entra
+          </a>
+        <% } else { %>
+          <div class="alert alert-error">
+            ⚠️ Microsoft Entra не е конфигуриран во апликацијата.
+          </div>
+        <% } %>
+      </div>
 
-        <button type="submit" class="btn btn-primary btn-full">Најави се</button>
-      </form>
+      <!-- ADMIN TAB -->
+      <div class="login-tab-content" id="tab-admin">
+        <div class="tab-description">
+          Пристап за администратор и служби
+        </div>
+        <form action="/login" method="POST" class="login-form">
+          <div class="form-group">
+            <label for="email">Email адреса</label>
+            <input type="email" id="email" name="email" placeholder="Внесете email адреса" required>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Лозинка</label>
+            <input type="password" id="password" name="password" placeholder="Внесете лозинка" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full">Најава</button>
+        </form>
+      </div>
 
       <div class="login-footer">
         <a href="https://feit.ukim.edu.mk">feit.ukim.edu.mk</a>
@@ -62,5 +153,22 @@
       </div>
     </div>
   </div>
+
+  <script>
+    // Tab switching logic
+    document.querySelectorAll('.login-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.dataset.tab;
+        
+        // Remove active class from all buttons and contents
+        document.querySelectorAll('.login-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.login-tab-content').forEach(content => content.classList.remove('active'));
+        
+        // Add active class to clicked button and corresponding content
+        btn.classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+      });
+    });
+  </script>
 </body>
 </html>

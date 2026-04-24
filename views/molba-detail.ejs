@@ -7,11 +7,7 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-    <%- include('partials/header', { isAdmin: true, adminName }) %>
-  <% } else { %>
-    <%- include('partials/header', { isAdmin: false, student: { ime: studentName, prezime: '', brIndeks: '' }, studentName }) %>
-  <% } %>
+  <%- include('partials/header', { viewer, isImpersonating }) %>
 
   <main class="container">
     <% if (success && success.length > 0) { %>
@@ -30,31 +26,39 @@
       </div>
 
       <div class="detail-info">
-        <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-          <div class="detail-row">
-            <strong>Студент:</strong>
-            <span><%= molba.student.ime %> <%= molba.student.prezime %></span>
-          </div>
-          <div class="detail-row">
-            <strong>Број на индекс:</strong>
-            <span><%= molba.student.brIndeks %></span>
-          </div>
-          <div class="detail-row">
-            <strong>Email:</strong>
-            <span><%= molba.student.email %></span>
-          </div>
-        <% } %>
+        <div class="detail-row">
+          <strong>Студент:</strong>
+          <span>
+            <%= molba.student.ime %> <%= molba.student.prezime %><%= molba.student.brIndeks ? ' br.индекс: ' + molba.student.brIndeks : '' %>
+          </span>
+        </div>
+        <div class="detail-row">
+          <strong>Смер:</strong>
+          <span><%= (molba.student && molba.student.smer) ? molba.student.smer : 'Нема податок' %></span>
+        </div>
+        <div class="detail-row">
+          <strong>Email:</strong>
+          <span><%= molba.student.email %></span>
+        </div>
         <div class="detail-row">
           <strong>Датум на поднесување:</strong>
           <span><%= molba.datum %></span>
         </div>
         <div class="detail-row">
-          <strong><% if (typeof isAdmin !== 'undefined' && isAdmin) { %>Тековен статус<% } else { %>Статус<% } %>:</strong>
-          <span><%= molba.status %></span>
-        </div>
-        <div class="detail-row">
           <strong>Наслов:</strong>
           <span><%= molba.naslov || 'Без наслов' %></span>
+        </div>
+        <div class="detail-row">
+          <strong>Семестар:</strong>
+          <span><%= molba.semestar %></span>
+        </div>
+        <div class="detail-row">
+          <strong>Учебна година:</strong>
+          <span><%= molba.ucebnaGodina || 'Нема податок' %></span>
+        </div>
+        <div class="detail-row">
+          <strong>Архивски број:</strong>
+          <span><%= molba.arhivskiBroj || 'Не е внесено' %></span>
         </div>
       </div>
 
@@ -63,17 +67,64 @@
         <div class="detail-text detail-description-full"><%= molba.description %></div>
       </div>
 
+      <div class="detail-section">
+        <h3>Документи</h3>
+        <div class="doc-actions">
+          <% if (molba.urlPath) { %>
+            <a href="/dashboard/molba/<%= molba.molbaId %>/document/student" class="btn btn-small">Симни приложен документ</a>
+          <% } else { %>
+            <p class="subtitle">Нема приложен документ за оваа молба.</p>
+          <% } %>
+
+          <% if (molba.arhivaPdfPath) { %>
+            <a href="/dashboard/molba/<%= molba.molbaId %>/document/archive" class="btn btn-small">Преглед/симни генериран PDF</a>
+          <% } %>
+        </div>
+      </div>
+
+      <% if (canArchiveNumber) { %>
+        <div class="admin-action-card">
+          <h3>Архивирање</h3>
+
+          <% if (molba.arhivskiBroj) { %>
+            <p class="subtitle">Архивскиот број е веќе внесен и молбата е проследена за обработка.</p>
+          <% } else { %>
+            <form action="/dashboard/molba/<%= molba.molbaId %>/archive-number" method="POST">
+              <div class="form-group">
+                <label for="arhivskiBroj">Архивски број</label>
+                <input id="arhivskiBroj" name="arhivskiBroj" type="text" maxlength="100" placeholder="Пр. ARH-2026-001" required>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-admin">Зачувај архивски број</button>
+              </div>
+            </form>
+          <% } %>
+        </div>
+      <% } %>
+
+      <% if (canGenerateArchivePdf) { %>
+        <div class="admin-action-card">
+          <h3>Архивски PDF</h3>
+          <p class="subtitle">Генерирај печатлива PDF верзија од одобрена или одбиена молба.</p>
+          <form action="/dashboard/molba/<%= molba.molbaId %>/generate-archive-pdf" method="POST">
+            <div class="form-actions">
+              <button type="submit" class="btn btn-admin">Генерирај PDF</button>
+            </div>
+          </form>
+        </div>
+      <% } %>
+
       <% if (molba.feedback) { %>
         <div class="detail-section feedback-section <%= molba.status === 'Одбиена' ? 'feedback-rejected' : 'feedback-approved' %>">
-          <h3><% if (typeof isAdmin !== 'undefined' && isAdmin) { %>Постоечки фидбек<% } else { %><%= molba.status === 'Одбиена' ? '❌ Причина за одбивање' : '✅ Повратна информација' %><% } %></h3>
+          <h3><%= molba.status === 'Одбиена' ? 'Причина за одбивање' : 'Повратна информација' %></h3>
           <p class="detail-text"><%= molba.feedback %></p>
         </div>
       <% } %>
 
-      <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+      <% if (canManage) { %>
         <div class="admin-action-card">
-          <h3>Ажурирај статус</h3>
-          <form action="/admin/molba/<%= molba.molbaId %>/status" method="POST">
+          <h3>Обработка на молба</h3>
+          <form action="/dashboard/molba/<%= molba.molbaId %>/status" method="POST">
             <div class="form-group">
               <label for="status">Нов статус</label>
               <select id="status" name="status" class="form-select" required>
@@ -83,12 +134,12 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="feedback">Повратна информација (опционално)</label>
-              <textarea id="feedback" name="feedback" rows="4" placeholder="Внесете причина за одбивање или друга повратна информација..."><%= molba.feedback || '' %></textarea>
+              <label for="feedback">Повратна информација</label>
+              <textarea id="feedback" name="feedback" rows="4" placeholder="Внесете причина или забелешка..."><%= molba.feedback || '' %></textarea>
             </div>
             <div class="form-actions">
               <a href="/dashboard" class="btn btn-secondary">← Назад</a>
-              <button type="submit" class="btn btn-admin">Ажурирај статус</button>
+              <button type="submit" class="btn btn-admin">Зачувај одлука</button>
             </div>
           </form>
         </div>

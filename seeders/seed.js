@@ -1,178 +1,171 @@
-const bcrypt = require('bcryptjs');
 const sequelize = require('../config/database');
-const Student = require('../models/Student');
-const Molba = require('../models/Molba');
+const {
+  User,
+  Molba,
+  Student,
+  Role
+} = require('../models');
 
 const seedData = async () => {
   try {
-    // Sinhronizacija na bazata (force: true brise i rekreira tabeli)
+    const queryInterface = sequelize.getQueryInterface();
+    const tablesToDrop = [
+      'molbi',
+      'students',
+      'users',
+      'roles',
+      'student_profiles',
+      'admin_profiles',
+      'studentska_sluzhba_profiles',
+      'prodekan_profiles',
+      'arhiva_profiles'
+    ];
+
+    for (const tableName of tablesToDrop) {
+      try {
+        await queryInterface.dropTable(tableName, { cascade: true });
+      } catch (error) {
+        // Ignore missing tables during reset.
+      }
+    }
+
     await sequelize.sync({ force: true });
-    console.log('✅ Bazata e uspeshno sinhronizirana.');
+    console.log('✅ Bazata e uspeshno resetirana i sinhronizirana.');
 
-    // Hashiranje na lozinki (site studenti imaat lozinka: "password123")
-    const hashedPassword = await bcrypt.hash('password123', 10);
+    const roles = await Role.bulkCreate([
+      { tip: 'Student' },
+      { tip: 'Admin' },
+      { tip: 'Sluzhba' },
+      { tip: 'Prodekan' },
+      { tip: 'Arhiva' }
+    ], { returning: true });
 
-    // ===== SEED STUDENTI =====
-    const studenti = await Student.bulkCreate([
+    const roleByTip = new Map(roles.map((role) => [role.tip, role]));
+
+    const users = await User.bulkCreate([
       {
         ime: 'Марко',
         prezime: 'Петровски',
-        brIndeks: '201001',
         email: 'marko.petrovski@student.mk',
-        password: hashedPassword
+        password: null,
+        provider: 'microsoft',
+        providerId: null,
+        roleId: roleByTip.get('Student').roleId
       },
       {
         ime: 'Ана',
         prezime: 'Стојановска',
-        brIndeks: '201002',
         email: 'ana.stojanovska@student.mk',
-        password: hashedPassword
+        password: null,
+        provider: 'microsoft',
+        providerId: null,
+        roleId: roleByTip.get('Student').roleId
       },
       {
         ime: 'Стефан',
         prezime: 'Димитриевски',
-        brIndeks: '201003',
         email: 'stefan.dimitrievski@student.mk',
-        password: hashedPassword
+        password: null,
+        provider: 'microsoft',
+        providerId: null,
+        roleId: roleByTip.get('Student').roleId
       },
       {
         ime: 'Елена',
         prezime: 'Николовска',
-        brIndeks: '201004',
         email: 'elena.nikolovska@student.mk',
-        password: hashedPassword
-      },
-      {
-        ime: 'Давид',
-        prezime: 'Јованов',
-        brIndeks: '201005',
-        email: 'david.jovanov@student.mk',
-        password: hashedPassword
-      },
-      {
-        ime: 'Ивана',
-        prezime: 'Ристовска',
-        brIndeks: '201006',
-        email: 'ivana.ristovska@student.mk',
-        password: hashedPassword
-      },
-      {
-        ime: 'Никола',
-        prezime: 'Трајковски',
-        brIndeks: '201007',
-        email: 'nikola.trajkovski@student.mk',
-        password: hashedPassword
-      },
-      {
-        ime: 'Мила',
-        prezime: 'Андреевска',
-        brIndeks: '201008',
-        email: 'mila.andreevska@student.mk',
-        password: hashedPassword
-      },
-      {
-        ime: 'Борјан',
-        prezime: 'Георгиевски',
-        brIndeks: '201009',
-        email: 'borjan.georgievski@student.mk',
-        password: hashedPassword
-      },
-      {
-        ime: 'Тамара',
-        prezime: 'Миленковска',
-        brIndeks: '201010',
-        email: 'tamara.milenkovska@student.mk',
-        password: hashedPassword
+        password: null,
+        provider: 'microsoft',
+        providerId: null,
+        roleId: roleByTip.get('Student').roleId
       }
     ]);
 
-    console.log(`✅ Uspeshno dodadeni ${studenti.length} studenti.`);
+    const studentOne = users.find((u) => u.email === 'marko.petrovski@student.mk');
+    const studentTwo = users.find((u) => u.email === 'ana.stojanovska@student.mk');
+    const studentThree = users.find((u) => u.email === 'stefan.dimitrievski@student.mk');
+    const studentFour = users.find((u) => u.email === 'elena.nikolovska@student.mk');
 
-    // ===== SEED MOLBI =====
+    await Student.bulkCreate([
+      { userId: studentOne.userId, brIndeks: '201001', smer: 'КН' },
+      { userId: studentTwo.userId, brIndeks: '201002', smer: 'ЕЕ' },
+      { userId: studentThree.userId, brIndeks: '201003', smer: 'АУС' },
+      { userId: studentFour.userId, brIndeks: '201004', smer: 'ТКИ' }
+    ]);
+
     const molbi = await Molba.bulkCreate([
       {
-        studentId: 1,
+        userId: studentOne.userId,
         status: 'Во процес',
         datum: '2026-03-01',
+        naslov: 'Молба за уверение',
+        semestar: 'Зимски',
+        ucebnaGodina: '2025/2026',
         description: 'Молба за издавање на уверение за редовен студент за потребите на стипендија.',
-        feedback: null
+        arhivskiBroj: 'ARH-MOL-2026-0101',
+        urlPath: 'uploads/student/seed-molba-1.pdf',
+        feedback: 'Молбата е примена и е во тек на обработка.'
       },
       {
-        studentId: 1,
+        userId: studentOne.userId,
         status: 'Одобрена',
         datum: '2026-02-15',
+        naslov: 'Молба за промена на предмет',
+        semestar: 'Летен',
+        ucebnaGodina: '2025/2026',
         description: 'Молба за промена на изборен предмет од Бази на податоци во Веб програмирање.',
+        arhivskiBroj: 'ARH-MOL-2026-0102',
+        urlPath: 'uploads/student/seed-molba-2.pdf',
         feedback: 'Молбата е одобрена. Промената е евидентирана во системот.'
       },
       {
-        studentId: 2,
+        userId: studentTwo.userId,
         status: 'Во процес',
         datum: '2026-03-03',
+        naslov: 'Молба за одложување испит',
+        semestar: 'Зимски',
+        ucebnaGodina: '2025/2026',
         description: 'Молба за одложување на испит по Математика 2 поради здравствени причини.',
-        feedback: null
+        arhivskiBroj: 'ARH-MOL-2026-0103',
+        urlPath: 'uploads/student/seed-molba-3.pdf',
+        feedback: 'Молбата е примена и е во тек на обработка.'
       },
       {
-        studentId: 3,
+        userId: studentThree.userId,
         status: 'Одбиена',
         datum: '2026-02-20',
+        naslov: 'Молба за признавање предмет',
+        semestar: 'Летен',
+        ucebnaGodina: '2025/2026',
         description: 'Молба за признавање на предмет положен на друг факултет.',
-        feedback: 'Молбата е одбиена бидејќи предметот не е еквивалентен со наставната програма. Потребна е дополнителна документација од матичниот факултет.'
+        arhivskiBroj: 'ARH-MOL-2026-0104',
+        urlPath: 'uploads/student/seed-molba-4.pdf',
+        feedback: 'Молбата е одбиена поради нееквивалентна наставна програма.'
       },
       {
-        studentId: 4,
+        userId: studentFour.userId,
         status: 'Во процес',
         datum: '2026-03-05',
+        naslov: 'Молба за потврда',
+        semestar: 'Зимски',
+        ucebnaGodina: '2025/2026',
         description: 'Молба за издавање на потврда за завршени семестри за потребите на работодавач.',
-        feedback: null
-      },
-      {
-        studentId: 5,
-        status: 'Одобрена',
-        datum: '2026-01-25',
-        description: 'Молба за продолжување на рок за предавање на семинарска работа по Оперативни системи.',
-        feedback: 'Одобрено продолжување до 15.02.2026. Контактирајте го професорот за детали.'
-      },
-      {
-        studentId: 6,
-        status: 'Во процес',
-        datum: '2026-03-04',
-        description: 'Молба за запишување на предмети од повисок семестар како условни предмети.',
-        feedback: null
-      },
-      {
-        studentId: 7,
-        status: 'Одбиена',
-        datum: '2026-02-10',
-        description: 'Молба за ослободување од плаќање на школарина за зимски семестар.',
-        feedback: 'Молбата е одбиена. Студентот не ги исполнува условите за ослободување согласно правилникот (потребен просек над 9.0).'
-      },
-      {
-        studentId: 8,
-        status: 'Одобрена',
-        datum: '2026-02-28',
-        description: 'Молба за издавање на дупликат студентска легитимација поради загуба на оригиналот.',
-        feedback: 'Одобрена. Подигнете ја новата легитимација од студентска служба со приложена уплатница.'
-      },
-      {
-        studentId: 9,
-        status: 'Во процес',
-        datum: '2026-03-06',
-        description: 'Молба за промена на лични податоци (адреса на живеење) во студентскиот досие.',
-        feedback: null
+        arhivskiBroj: 'ARH-MOL-2026-0105',
+        urlPath: 'uploads/student/seed-molba-5.pdf',
+        feedback: 'Молбата е примена и е во тек на обработка.'
       }
     ]);
 
+    console.log(`✅ Uspeshno dodadeni ${roles.length} roles.`);
+    console.log(`✅ Uspeshno dodadeni ${users.length} korisnici.`);
     console.log(`✅ Uspeshno dodadeni ${molbi.length} molbi.`);
 
     console.log('\n========================================');
     console.log('  SEED ZAVRSEN USPESHNO!');
     console.log('========================================');
-    console.log('\n--- STUDENT NAJAVA ---');
-    console.log('Primer: marko.petrovski@student.mk / password123');
-    console.log('\n--- ADMIN NAJAVA ---');
-    console.log('Email: admin@university.mk');
-    console.log('Lozinka: password123');
-    console.log('URL: http://localhost:3000/admin/login');
+    console.log('\n--- LOGIN AKAUNTI ---');
+    console.log('Student: marko.petrovski@student.mk (Microsoft Entra login)');
+    console.log('Lokalni admin/service accounts se kreiraat od .env so npm run init-admin');
     console.log('========================================\n');
 
     process.exit(0);

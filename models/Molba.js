@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Student = require('./Student');
 
 const Molba = sequelize.define('Molba', {
   molbaId: {
@@ -8,12 +7,12 @@ const Molba = sequelize.define('Molba', {
     primaryKey: true,
     autoIncrement: true
   },
-  studentId: {
+  userId: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: Student,
-      key: 'studentId'
+      model: 'users',
+      key: 'userId'
     }
   },
   status: {
@@ -31,9 +30,48 @@ const Molba = sequelize.define('Molba', {
     allowNull: false,
     defaultValue: 'Без наслов'
   },
+  semestar: {
+    type: DataTypes.ENUM('Зимски', 'Летен'),
+    allowNull: false,
+    defaultValue: 'Зимски'
+  },
+  ucebnaGodina: {
+    type: DataTypes.STRING(9),
+    allowNull: false,
+    defaultValue: '2025/2026',
+    field: 'ucebna_godina',
+    validate: {
+      is: /^\d{4}\/\d{4}$/
+    }
+  },
   description: {
     type: DataTypes.TEXT,
     allowNull: false
+  },
+  arhivskiBroj: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    unique: true,
+    field: 'arhivski_broj',
+    validate: {
+      notEmpty: true
+    }
+  },
+  urlPath: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'url_path',
+    validate: {
+      notEmpty: true
+    }
+  },
+  arhivaPdfPath: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'arhiva_pdf_path',
+    validate: {
+      notEmpty: true
+    }
   },
   feedback: {
     type: DataTypes.TEXT,
@@ -44,8 +82,5 @@ const Molba = sequelize.define('Molba', {
   tableName: 'molbi',
   timestamps: true
 });
-
-Student.hasMany(Molba, { foreignKey: 'studentId', as: 'molbi' });
-Molba.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
 
 module.exports = Molba;

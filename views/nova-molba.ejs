@@ -7,26 +7,47 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <%- include('partials/header', { isAdmin: false, student: { ime: studentName, prezime: '', brIndeks: '' }, studentName }) %>
+  <%- include('partials/header', { viewer, isImpersonating }) %>
 
   <main class="container">
     <div class="form-card">
       <h2>Нова молба</h2>
-      <p class="subtitle">Пополнете го формуларот за да испратите молба до студентска служба</p>
+      <p class="subtitle">Внесете наслов, текст и задолжително прикачете еден PDF документ.</p>
 
       <% if (error && error.length > 0) { %>
         <div class="alert alert-error"><%= error %></div>
       <% } %>
 
-      <form action="/dashboard/nova-molba" method="POST">
+      <form action="/dashboard/nova-molba" method="POST" enctype="multipart/form-data">
         <div class="form-group">
           <label for="naslov">Наслов на молбата</label>
           <input id="naslov" name="naslov" type="text" maxlength="150" placeholder="Пр. Молба за 36 кредити" required>
         </div>
 
         <div class="form-group">
+          <label for="semestar">Семестар</label>
+          <select id="semestar" name="semestar" class="form-select" required>
+            <option value="" selected disabled>Изберете семестар</option>
+            <option value="Зимски">Зимски</option>
+            <option value="Летен">Летен</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="ucebnaGodina">Учебна година</label>
+          <input id="ucebnaGodina" name="ucebnaGodina" type="text" class="form-select" placeholder="Пр. 2025/2026" pattern="^\d{4}\/\d{4}$" maxlength="9" required>
+          <small class="help-text">Формат: ГГГГ/ГГГГ (пример 2025/2026)</small>
+        </div>
+
+        <div class="form-group">
           <label for="description">Опис на молбата</label>
-          <textarea id="description" name="description" rows="6" placeholder="Внесете детален опис на вашата молба..." required></textarea>
+          <textarea id="description" name="description" rows="6" placeholder="Внесете го текстот на молбата..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="document">Прилог (задолжително: PDF)</label>
+          <input id="document" name="document" type="file" accept=".pdf,application/pdf" required>
+          <small class="help-text">Прикачете еден PDF фајл со сите дополнителни документи (макс 15MB).</small>
         </div>
 
         <div class="form-actions">

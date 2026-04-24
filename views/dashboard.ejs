@@ -7,11 +7,7 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-    <%- include('partials/header', { isAdmin: true, adminName }) %>
-  <% } else { %>
-    <%- include('partials/header', { student }) %>
-  <% } %>
+  <%- include('partials/header', { viewer, isImpersonating }) %>
 
   <main class="container">
     <% if (success && success.length > 0) { %>
@@ -21,11 +17,11 @@
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
-    <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+    <% if (!isStudent) { %>
       <div class="dashboard-header">
         <div>
           <h2>Сите молби</h2>
-          <p class="subtitle">Преглед и управување со молби од студенти</p>
+          <p class="subtitle">Преглед на молби според улога: <strong><%= viewer.roleLabel %></strong></p>
         </div>
       </div>
 
@@ -59,30 +55,47 @@
           </select>
         </div>
         <div class="filter-group">
-          <label for="studentFilter">Студент:</label>
-          <select id="studentFilter" class="form-select filter-select">
-            <option value="site" <%= currentStudentId === 'site' ? 'selected' : '' %>>Сите студенти</option>
-            <% studenti.forEach(s => { %>
-              <option value="<%= s.studentId %>" <%= currentStudentId == s.studentId ? 'selected' : '' %>><%= s.ime %> <%= s.prezime %> (<%= s.brIndeks %>)</option>
-            <% }) %>
+          <label for="semestarFilter">Семестар:</label>
+          <select id="semestarFilter" class="form-select filter-select">
+            <option value="site" <%= currentSemestar === 'site' ? 'selected' : '' %>>Сите</option>
+            <option value="Зимски" <%= currentSemestar === 'Зимски' ? 'selected' : '' %>>Зимски</option>
+            <option value="Летен" <%= currentSemestar === 'Летен' ? 'selected' : '' %>>Летен</option>
           </select>
         </div>
+        <div class="filter-group">
+          <label for="fromDate">Од датум:</label>
+          <input id="fromDate" class="form-select filter-select" type="date" value="<%= currentFromDate %>">
+        </div>
+        <div class="filter-group">
+          <label for="toDate">До датум:</label>
+          <input id="toDate" class="form-select filter-select" type="date" value="<%= currentToDate %>">
+        </div>
+        <button type="button" class="btn btn-secondary btn-small" onclick="clearFilters()">Исчисти</button>
       </div>
 
       <script>
         document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('studentFilter').addEventListener('change', applyFilters);
+        document.getElementById('semestarFilter').addEventListener('change', applyFilters);
+        document.getElementById('fromDate').addEventListener('change', applyFilters);
+        document.getElementById('toDate').addEventListener('change', applyFilters);
+
         function applyFilters() {
           const status = document.getElementById('statusFilter').value;
-          const studentId = document.getElementById('studentFilter').value;
-          window.location.href = '/dashboard?status=' + encodeURIComponent(status) + '&studentId=' + encodeURIComponent(studentId);
+          const semestar = document.getElementById('semestarFilter').value;
+          const fromDate = document.getElementById('fromDate').value;
+          const toDate = document.getElementById('toDate').value;
+          window.location.href = '/dashboard?status=' + encodeURIComponent(status) + '&semestar=' + encodeURIComponent(semestar) + '&fromDate=' + encodeURIComponent(fromDate) + '&toDate=' + encodeURIComponent(toDate);
+        }
+
+        function clearFilters() {
+          window.location.href = '/dashboard?status=site&semestar=site&fromDate=&toDate=';
         }
       </script>
 
       <% if (molbi.length === 0) { %>
         <div class="empty-state">
-          <h3>Нема поднесени молби</h3>
-          <p>Моментално нема молби од студенти.</p>
+          <h3>Нема молби за избраните филтри</h3>
+          <p>Променете филтер или почекајте нови поднесувања.</p>
         </div>
       <% } else { %>
         <div class="table-wrapper">
@@ -93,6 +106,7 @@
                 <th>Студент</th>
                 <th>Бр. индекс</th>
                 <th>Наслов</th>
+                <th>Семестар / учебна година</th>
                 <th>Датум</th>
                 <th>Статус</th>
                 <th>Акции</th>
@@ -103,8 +117,9 @@
                 <tr>
                   <td><%= molba.molbaId %></td>
                   <td><%= molba.student.ime %> <%= molba.student.prezime %></td>
-                  <td><%= molba.student.brIndeks %></td>
-                  <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 80) %><%= (molba.naslov || '').length > 80 ? '...' : '' %></td>
+                  <td><%= molba.student.brIndeks || '-' %></td>
+                  <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 70) %><%= (molba.naslov || '').length > 70 ? '...' : '' %></td>
+                  <td><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></td>
                   <td><%= molba.datum %></td>
                   <td>
                     <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
@@ -112,7 +127,7 @@
                     </span>
                   </td>
                   <td>
-                    <a href="/admin/molba/<%= molba.molbaId %>" class="btn btn-small">Детали</a>
+                    <a href="/dashboard/molba/<%= molba.molbaId %>" class="btn btn-small">Детали</a>
                   </td>
                 </tr>
               <% }) %>
@@ -125,7 +140,7 @@
       <div class="dashboard-header">
         <div>
           <h2>Мои молби</h2>
-          <p class="subtitle">Преглед на сите испратени молби до студентска служба</p>
+          <p class="subtitle">Поднеси молба со задолжителен наслов, текст и PDF документ</p>
         </div>
         <a href="/dashboard/nova-molba" class="btn btn-primary">+ Нова молба</a>
       </div>
@@ -150,20 +165,58 @@
       </div>
 
       <div class="filter-bar">
-        <label for="statusFilter">Филтрирај по статус:</label>
-        <select id="statusFilter" class="form-select filter-select" onchange="window.location.href='/dashboard?status='+this.value">
-          <option value="site" <%= currentStatus === 'site' ? 'selected' : '' %>>Сите</option>
-          <option value="Во процес" <%= currentStatus === 'Во процес' ? 'selected' : '' %>>Во процес</option>
-          <option value="Одобрена" <%= currentStatus === 'Одобрена' ? 'selected' : '' %>>Одобрена</option>
-          <option value="Одбиена" <%= currentStatus === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
-        </select>
+        <div class="filter-group">
+          <label for="statusFilterStudent">Статус:</label>
+          <select id="statusFilterStudent" class="form-select filter-select">
+            <option value="site" <%= currentStatus === 'site' ? 'selected' : '' %>>Сите</option>
+            <option value="Во процес" <%= currentStatus === 'Во процес' ? 'selected' : '' %>>Во процес</option>
+            <option value="Одобрена" <%= currentStatus === 'Одобрена' ? 'selected' : '' %>>Одобрена</option>
+            <option value="Одбиена" <%= currentStatus === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="semestarFilterStudent">Семестар:</label>
+          <select id="semestarFilterStudent" class="form-select filter-select">
+            <option value="site" <%= currentSemestar === 'site' ? 'selected' : '' %>>Сите</option>
+            <option value="Зимски" <%= currentSemestar === 'Зимски' ? 'selected' : '' %>>Зимски</option>
+            <option value="Летен" <%= currentSemestar === 'Летен' ? 'selected' : '' %>>Летен</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="fromDateStudent">Од датум:</label>
+          <input id="fromDateStudent" class="form-select filter-select" type="date" value="<%= currentFromDate %>">
+        </div>
+        <div class="filter-group">
+          <label for="toDateStudent">До датум:</label>
+          <input id="toDateStudent" class="form-select filter-select" type="date" value="<%= currentToDate %>">
+        </div>
+        <button type="button" class="btn btn-secondary btn-small" onclick="clearStudentFilters()">Исчисти</button>
       </div>
+
+      <script>
+        document.getElementById('statusFilterStudent').addEventListener('change', applyStudentFilters);
+        document.getElementById('semestarFilterStudent').addEventListener('change', applyStudentFilters);
+        document.getElementById('fromDateStudent').addEventListener('change', applyStudentFilters);
+        document.getElementById('toDateStudent').addEventListener('change', applyStudentFilters);
+
+        function applyStudentFilters() {
+          const status = document.getElementById('statusFilterStudent').value;
+          const semestar = document.getElementById('semestarFilterStudent').value;
+          const fromDate = document.getElementById('fromDateStudent').value;
+          const toDate = document.getElementById('toDateStudent').value;
+          window.location.href = '/dashboard?status=' + encodeURIComponent(status) + '&semestar=' + encodeURIComponent(semestar) + '&fromDate=' + encodeURIComponent(fromDate) + '&toDate=' + encodeURIComponent(toDate);
+        }
+
+        function clearStudentFilters() {
+          window.location.href = '/dashboard?status=site&semestar=site&fromDate=&toDate=';
+        }
+      </script>
 
       <% if (molbi.length === 0) { %>
         <div class="empty-state">
           <div class="empty-state-icon">📭</div>
           <h3>Немате испратено молби</h3>
-          <p>Кликнете на "Нова молба" за да испратите молба до студентска служба.</p>
+          <p>Кликнете на „Нова молба“ за да испратите барање.</p>
         </div>
       <% } else { %>
         <div class="table-wrapper">
@@ -172,6 +225,7 @@
               <tr>
                 <th>#</th>
                 <th>Наслов</th>
+                <th>Семестар / учебна година</th>
                 <th>Датум</th>
                 <th>Статус</th>
                 <th></th>
@@ -182,6 +236,7 @@
                 <tr>
                   <td><%= index + 1 %></td>
                   <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 80) %><%= (molba.naslov || '').length > 80 ? '...' : '' %></td>
+                  <td><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></td>
                   <td><%= molba.datum %></td>
                   <td>
                     <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">

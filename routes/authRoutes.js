@@ -4,6 +4,8 @@ const authController = require('../controllers/authController');
 
 router.get('/login', authController.getLogin);
 router.post('/login', authController.postLogin);
+router.get('/auth/microsoft', authController.startMicrosoftLogin);
+router.get('/auth/microsoft/callback', authController.microsoftCallback);
 router.get('/logout', authController.logout);
 
 router.get('/', (req, res) => {

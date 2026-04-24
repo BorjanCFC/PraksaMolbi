@@ -2,39 +2,28 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Student = sequelize.define('Student', {
-  studentId: {
+  userId: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true
-  },
-  ime: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  prezime: {
-    type: DataTypes.STRING,
-    allowNull: false
+    references: {
+      model: 'users',
+      key: 'userId'
+    },
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
   },
   brIndeks: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     unique: true
   },
-  email: {
+  smer: {
     type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: {
-      isEmail: true
-    }
-  },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true
   }
 }, {
   tableName: 'students',
-  timestamps: true
+  timestamps: false
 });
 
 module.exports = Student;

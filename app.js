@@ -3,7 +3,9 @@ const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
+const fs = require('fs');
 const sequelize = require('./config/database');
+const { isEntraConfigured } = require('./config/entraAuth');
 
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -11,18 +13,18 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const ensureMolbaNaslovColumn = async () => {
-  try {
-    const [columns] = await sequelize.query("PRAGMA table_info('molbi');");
-    const hasNaslov = Array.isArray(columns) && columns.some((col) => col.name === 'naslov');
+const ensureUploadDirectories = () => {
+  const folders = [
+    path.join(__dirname, 'uploads'),
+    path.join(__dirname, 'uploads', 'student'),
+    path.join(__dirname, 'uploads', 'archive')
+  ];
 
-    if (!hasNaslov) {
-      await sequelize.query("ALTER TABLE molbi ADD COLUMN naslov VARCHAR(150) NOT NULL DEFAULT 'Без наслов';");
-      console.log('✅ Dodadena e kolona "naslov" vo tabelata molbi.');
+  folders.forEach((folder) => {
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true });
     }
-  } catch (error) {
-    console.warn('⚠️ Nastana problem pri proveruva na naslov kolona:', error.message);
-  }
+  });
 };
 
 app.set('view engine', 'ejs');
@@ -46,32 +48,42 @@ app.use(flash());
 app.use('/', authRoutes);
 app.use('/', dashboardRoutes);
 
+app.use((error, req, res, next) => {
+  if (error && error.message) {
+    req.flash('error', error.message);
+    return res.redirect('back');
+  }
+  return next();
+});
+
 app.use((req, res) => {
   res.status(404).render('login', {
     title: 'Страницата не е пронајдена',
     error: 'Страницата не е пронајдена.',
-    success: ''
+    success: '',
+    entraEnabled: isEntraConfigured()
   });
 });
 
 
-sequelize.sync().then(async () => {
-  await ensureMolbaNaslovColumn();
-  console.log('✅ Bazata e povrzana i sinhronizirana.');
+ensureUploadDirectories();
+
+sequelize.sync({ alter: true }).then(async () => {
+  console.log('Bazata e povrzana i sinhronizirana.');
 
   const server = app.listen(PORT, () => {
-    console.log(`🚀 Serverot raboti na http://localhost:${PORT}`);
-    console.log(`📋 Login: http://localhost:${PORT}/login`);
+    console.log(`Serverot raboti na http://localhost:${PORT}`);
+    console.log(`Login: http://localhost:${PORT}/login`);
   });
 
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`❌ Port ${PORT} e zafaten. Oslobodi go toj port ili promeni PORT vo .env.`);
+      console.error(`Port ${PORT} e zafaten. Oslobodi go toj port ili promeni PORT vo .env.`);
     } else {
-      console.error('❌ Greska pri startuvanje na server:', err.message);
+      console.error('Greska pri startuvanje na server:', err.message);
     }
     process.exit(1);
   });
 }).catch((err) => {
-  console.error('❌ Greska pri povrzuvanje so baza:', err);
+  console.error('Greska pri povrzuvanje so baza:', err);
 });

@@ -1,53 +1,109 @@
 const bcrypt = require('bcryptjs');
-const { Student } = require('../models');
+const {
+  User,
+  Student,
+  Role
+} = require('../models');
+const { resolveRoleContext } = require('../utils/roleHelpers');
+const {
+  isEntraConfigured,
+  buildAuthorizeUrl,
+  exchangeCodeForTokens,
+  verifyIdToken,
+  generateStateToken,
+  getEntraConfig
+} = require('../config/entraAuth');
 
-const ADMIN_EMAIL = 'admin@university.mk';
-const ADMIN_PASSWORD = 'password123';
-const ADMIN_NAME = 'Администратор Студентска Служба';
+const isLoggedIn = (req) => req.session && !!req.session.user;
 
-const isAdminSession = (req) => req.session && req.session.isAdmin === true;
-const isStudentSession = (req) => req.session && !!req.session.studentId && !req.session.isAdmin;
+const userRoleIncludes = [
+  { model: Student, as: 'studentProfile', required: false },
+  { model: Role, as: 'role', required: false }
+];
 
-// GET /login and /admin/login
+const buildSessionUser = (user) => {
+  const roleContext = resolveRoleContext(user);
+
+  return {
+    userId: user.userId,
+    ime: user.ime,
+    prezime: user.prezime,
+    brIndeks: roleContext.brIndeks,
+    email: user.email,
+    roleId: roleContext.roleId,
+    role: roleContext.role,
+    roleLabel: roleContext.roleLabel,
+    authProvider: user.provider || 'local'
+  };
+};
+
+const getUserEmailFromPayload = (payload) => {
+  return payload.preferred_username || payload.email || payload.upn || null;
+};
+
+const isStudentUser = (user) => {
+  const roleContext = resolveRoleContext(user);
+  return roleContext.role === 'student';
+};
+
+const getAllowedEntraDomains = () => {
+  const raw = process.env.ENTRA_ALLOWED_EMAIL_DOMAINS || '';
+  return raw
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+};
+
+const isAllowedStudentEmailDomain = (email) => {
+  const allowedDomains = getAllowedEntraDomains();
+  if (!allowedDomains.length) return true;
+
+  const domain = (email.split('@')[1] || '').toLowerCase();
+  return allowedDomains.includes(domain);
+};
+
+// GET /login
 exports.getLogin = (req, res) => {
-  if (isAdminSession(req)) return res.redirect('/dashboard');
-  if (isStudentSession(req)) return res.redirect('/dashboard');
+  if (isLoggedIn(req)) return res.redirect('/dashboard');
 
   res.render('login', {
     title: 'Најава',
     error: req.flash('error'),
-    success: req.flash('success')
+    success: req.flash('success'),
+    entraEnabled: isEntraConfigured()
   });
 };
 
-// POST /login and /admin/login
+// POST /login
 exports.postLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      req.session.adminId = 'static-admin';
-      req.session.adminName = ADMIN_NAME;
-      req.session.isAdmin = true;
+    const user = await User.findOne({
+      where: { email },
+      include: userRoleIncludes
+    });
 
-      delete req.session.studentId;
-      delete req.session.studentName;
-      delete req.session.brIndeks;
+    if (user) {
+      const roleContext = resolveRoleContext(user);
+      if (!roleContext.role) {
+        req.flash('error', 'Корисникот нема валиден профил во системот.');
+        return res.redirect('/login');
+      }
 
-      return res.redirect('/dashboard');
-    }
+      if (roleContext.role === 'student' || user.provider === 'microsoft') {
+        req.flash('error', 'Студентите се најавуваат преку Microsoft Entra копчето.');
+        return res.redirect('/login');
+      }
 
-    const student = await Student.findOne({ where: { email } });
-    if (student) {
-      const isMatch = await bcrypt.compare(password, student.password);
+      if (!user.password) {
+        req.flash('error', 'Овој корисник нема локална лозинка.');
+        return res.redirect('/login');
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
       if (isMatch) {
-        req.session.studentId = student.studentId;
-        req.session.studentName = `${student.ime} ${student.prezime}`;
-        req.session.brIndeks = student.brIndeks;
-        req.session.isAdmin = false;
-
-        delete req.session.adminId;
-        delete req.session.adminName;
+        req.session.user = buildSessionUser(user);
 
         return res.redirect('/dashboard');
       }
@@ -62,10 +118,143 @@ exports.postLogin = async (req, res) => {
   }
 };
 
-// GET /logout and /admin/logout
+// GET /auth/microsoft
+exports.startMicrosoftLogin = (req, res) => {
+  if (!isEntraConfigured()) {
+    req.flash('error', 'Microsoft Entra не е конфигуриран во .env.');
+    return res.redirect('/login');
+  }
+
+  const state = generateStateToken();
+  const nonce = generateStateToken();
+
+  req.session.entraAuth = {
+    state,
+    nonce
+  };
+
+  return res.redirect(buildAuthorizeUrl(state, nonce));
+};
+
+// GET /auth/microsoft/callback
+exports.microsoftCallback = async (req, res) => {
+  try {
+    if (!isEntraConfigured()) {
+      req.flash('error', 'Microsoft Entra не е конфигуриран.');
+      return res.redirect('/login');
+    }
+
+    const { code, state, error, error_description: errorDescription } = req.query;
+    if (error) {
+      req.flash('error', `Entra login не успеа: ${errorDescription || error}`);
+      return res.redirect('/login');
+    }
+
+    const savedAuth = req.session.entraAuth;
+    if (!savedAuth || !savedAuth.state || !savedAuth.nonce || !state || savedAuth.state !== state) {
+      req.flash('error', 'Невалидна Entra сесија. Обидете се повторно.');
+      return res.redirect('/login');
+    }
+
+    delete req.session.entraAuth;
+
+    if (!code) {
+      req.flash('error', 'Не е добиен authorization code од Entra.');
+      return res.redirect('/login');
+    }
+
+    const tokenResponse = await exchangeCodeForTokens(code);
+    const payload = await verifyIdToken(tokenResponse.id_token, savedAuth.nonce);
+
+    const providerId = payload.oid;
+    const email = getUserEmailFromPayload(payload);
+    if (!providerId || !email) {
+      req.flash('error', 'Недостигаат OID или email од Entra профилот.');
+      return res.redirect('/login');
+    }
+
+    if (!isAllowedStudentEmailDomain(email)) {
+      req.flash('error', 'Овој емаил домен не е дозволен за студентска Entra најава.');
+      return res.redirect('/login');
+    }
+
+    let user = await User.findOne({
+      where: { provider: 'microsoft', providerId },
+      include: userRoleIncludes
+    });
+
+    if (!user) {
+      user = await User.findOne({
+        where: { email: email.toLowerCase() },
+        include: userRoleIncludes
+      });
+
+      if (!user) {
+        const studentRole = await Role.findOne({
+          where: { tip: 'Student' }
+        });
+
+        if (!studentRole) {
+          req.flash('error', 'Во системот не постои Student улога.');
+          return res.redirect('/login');
+        }
+
+        const fullName = payload.name || '';
+        const nameParts = fullName.trim().split(' ');
+
+        const ime = nameParts[0] || '';
+        const prezime = nameParts.slice(1).join(' ') || '';
+
+        user = await User.create({
+          ime,
+          prezime,
+          email: email.toLowerCase(),
+          password: null,
+          roleId: studentRole.roleId,
+          provider: 'microsoft',
+          providerId
+        });
+
+        await Student.create({
+          userId: user.userId,
+          brIndeks: null,
+          smer: null
+        });
+
+        user = await User.findOne({
+          where: { email: email.toLowerCase() },
+          include: userRoleIncludes
+        });
+      }
+    }
+
+    if (!isStudentUser(user)) {
+      req.flash('error', 'Entra најава е дозволена само за студенти.');
+      return res.redirect('/login');
+    }
+
+    req.session.user = buildSessionUser(user);
+    return res.redirect('/dashboard');
+  } catch (error) {
+    console.error('Microsoft callback error:', error);
+    req.flash('error', 'Настана грешка при Microsoft Entra најава.');
+    return res.redirect('/login');
+  }
+};
+
+// GET /logout
 exports.logout = (req, res) => {
+  const shouldLogoutFromMicrosoft = req.session?.user?.authProvider === 'microsoft';
+
   req.session.destroy((err) => {
     if (err) console.error('Logout error:', err);
-    res.redirect('/login');
+
+    if (shouldLogoutFromMicrosoft && isEntraConfigured()) {
+      const { tenantId } = getEntraConfig();
+      const postLogoutRedirectUri = encodeURIComponent(process.env.ENTRA_POST_LOGOUT_REDIRECT_URI || 'http://localhost:3000/login');
+      return res.redirect(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/logout?post_logout_redirect_uri=${postLogoutRedirectUri}`);
+    }
+
+    return res.redirect('/login');
   });
 };
