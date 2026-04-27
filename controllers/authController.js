@@ -74,6 +74,17 @@ exports.getLogin = (req, res) => {
   });
 };
 
+// GET /admin-login
+exports.getAdminLogin = (req, res) => {
+  if (isLoggedIn(req)) return res.redirect('/dashboard');
+
+  res.render('admin-login', {
+    title: 'Администраторска Најава',
+    error: req.flash('error'),
+    success: req.flash('success')
+  });
+};
+
 // POST /login
 exports.postLogin = async (req, res) => {
   try {

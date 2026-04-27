@@ -3,68 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Систем за електронско поднесување молби</title>
+  <title>Администраторска Најава — Систем за електронско поднесување молби</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/images/feitLogoBrowser.png">
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    .login-tabs {
-      display: flex;
-      gap: 0;
-      margin-bottom: 30px;
-      border-bottom: 2px solid #e0e0e0;
-    }
-
-    .login-tab-btn {
-      flex: 1;
-      padding: 12px 20px;
-      border: none;
-      background: transparent;
-      color: #666;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-    }
-
-    .login-tab-btn:hover {
-      color: #0066cc;
-      background-color: rgba(0, 102, 204, 0.05);
-    }
-
-    .login-tab-btn.active {
-      color: #0066cc;
-      border-bottom-color: #0066cc;
-    }
-
-    .login-tab-content {
-      display: none;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .login-tab-content.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(-5px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .tab-description {
-      text-align: center;
-      color: #666;
-      margin-bottom: 25px;
-      font-size: 14px;
-    }
-  </style>
 </head>
 <body>
   <div class="login-wrapper">
@@ -86,7 +27,7 @@
       <div class="login-header">
         <img src="/images/logo-feit-header.png" alt="УКИМ — ФЕИТ" class="login-logo-wide">
         <div class="login-divider"></div>
-        <h2>Систем за електронско поднесување молби</h2>
+        <h2>Администраторска Најава</h2>
       </div>
 
       <% if (error && error.length > 0) { %>
@@ -101,25 +42,20 @@
         </div>
       <% } %>
 
-      <!-- STUDENT LOGIN -->
-      <div class="student-login">
-        <div class="tab-description">
-          <p style="font-size: 16px;  color: #226cb7;">Добредојдовте!</p>
-          <p style="font-size: 15px; color: #226cb7; margin-top: 5px;">Најавете се со вашиот студентски Microsoft акаунт</p>
+      <!-- ADMIN LOGIN FORM -->
+      <form action="/login" method="POST" class="login-form">
+        <div class="form-group">
+          <label for="email">Email адреса</label>
+          <input type="email" id="email" name="email" placeholder="Внесете email адреса" required autofocus>
         </div>
-        <% if (entraEnabled) { %>
-          <a href="/auth/microsoft" class="btn btn-microsoft btn-full">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
-              <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/>
-            </svg>
-            Најава со Microsoft
-          </a>
-        <% } else { %>
-          <div class="alert alert-error">
-            ⚠️ Microsoft Entra не е конфигуриран во апликацијата.
-          </div>
-        <% } %>
-      </div>
+
+        <div class="form-group">
+          <label for="password">Лозинка</label>
+          <input type="password" id="password" name="password" placeholder="Внесете лозинка" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">Најава</button>
+      </form>
 
       <div class="login-footer">
         <a href="https://feit.ukim.edu.mk">feit.ukim.edu.mk</a>
