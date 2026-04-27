@@ -118,7 +118,7 @@
                 <tr>
                   <td><%= molba.molbaId %></td>
                   <td><%= molba.student.ime %> <%= molba.student.prezime %></td>
-                  <td><%= molba.student.brIndeks || '-' %></td>
+                  <td><%= molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null) || '-' %></td>
                   <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 70) %><%= (molba.naslov || '').length > 70 ? '...' : '' %></td>
                   <td><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></td>
                   <td><%= molba.datum %></td>

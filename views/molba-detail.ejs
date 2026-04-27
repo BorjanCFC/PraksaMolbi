@@ -30,12 +30,14 @@
         <div class="detail-row">
           <strong>Студент:</strong>
           <span>
-            <%= molba.student.ime %> <%= molba.student.prezime %><%= molba.student.brIndeks ? ' br.индекс: ' + molba.student.brIndeks : '' %>
+            <%= molba.student.ime %> <%= molba.student.prezime %>
+            <% const studentBrIndeks = molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null); %>
+            <% if (studentBrIndeks) { %>
+              <span style="color: #000000c1; margin-left: 1rem;">
+                <%= studentBrIndeks %>
+              </span>
+            <% } %>
           </span>
-        </div>
-        <div class="detail-row">
-          <strong>Смер:</strong>
-          <span><%= (molba.student && molba.student.smer) ? molba.student.smer : 'Нема податок' %></span>
         </div>
         <div class="detail-row">
           <strong>Email:</strong>
@@ -49,6 +51,13 @@
           <strong>Наслов:</strong>
           <span><%= molba.naslov || 'Без наслов' %></span>
         </div>
+        <% const studentSmer = molba.student.smer || (molba.student.studentProfile ? molba.student.studentProfile.smer : null); %>
+        <% if (studentSmer) { %>
+          <div class="detail-row">
+            <strong>Смер:</strong>
+            <span><%= studentSmer %></span>
+          </div>
+        <% } %>
         <div class="detail-row">
           <strong>Семестар:</strong>
           <span><%= molba.semestar %></span>

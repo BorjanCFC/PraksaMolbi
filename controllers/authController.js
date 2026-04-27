@@ -4,7 +4,7 @@ const {
   Student,
   Role
 } = require('../models');
-const { resolveRoleContext } = require('../utils/roleHelpers');
+const { resolveRoleContext, isStudentRole } = require('../utils/roleHelpers');
 const {
   isEntraConfigured,
   buildAuthorizeUrl,
@@ -255,17 +255,12 @@ exports.microsoftCallback = async (req, res) => {
 
 // GET /logout
 exports.logout = (req, res) => {
-  const shouldLogoutFromMicrosoft = req.session?.user?.authProvider === 'microsoft';
+  const role = req.session?.user?.role || null;
+  const redirectPath = !role || isStudentRole(role) ? '/login' : '/admin-login';
 
   req.session.destroy((err) => {
     if (err) console.error('Logout error:', err);
-
-    if (shouldLogoutFromMicrosoft && isEntraConfigured()) {
-      const { tenantId } = getEntraConfig();
-      const postLogoutRedirectUri = encodeURIComponent(process.env.ENTRA_POST_LOGOUT_REDIRECT_URI || 'http://localhost:3000/login');
-      return res.redirect(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/logout?post_logout_redirect_uri=${postLogoutRedirectUri}`);
-    }
-
-    return res.redirect('/login');
+    res.clearCookie('connect.sid');
+    return res.redirect(redirectPath);
   });
 };

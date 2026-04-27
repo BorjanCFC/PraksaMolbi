@@ -7,7 +7,8 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "seed": "node seeders/seed.js",
-    "init-admin": "node scripts/init-admin.js"
+    "init-admin": "node scripts/init-admin.js",
+    "reset-db": "node scripts/reset-db.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

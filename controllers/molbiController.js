@@ -61,6 +61,16 @@ const formatDateMk = (value) => {
   return `${day}.${month}.${year}`;
 };
 
+const sanitizePdfText = (value) => {
+  if (value === null || value === undefined) return '';
+
+  return String(value)
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFFFD\u25A1]/g, '')
+    .trim();
+};
+
 const generateArchivePdfFile = async (molba) => {
   const archiveDir = path.join(projectRoot, archivePdfRelativeDir);
   ensureDir(archiveDir);
@@ -69,17 +79,20 @@ const generateArchivePdfFile = async (molba) => {
   const fullPath = path.join(archiveDir, fileName);
   const relativePath = toPosixPath(path.join('uploads', 'archive', fileName));
 
+  const studentProfile = molba.student && molba.student.studentProfile ? molba.student.studentProfile : null;
   const studentName = `${molba.student.ime} ${molba.student.prezime}`.trim();
-  const indexValue = molba.student.brIndeks || 'N/A';
-  const majorValue = molba.student.smer || 'N/A';
-  const titleValue = molba.naslov || 'Bez naslov';
-  const archiveNumberValue = molba.arhivskiBroj || 'Nema arhivski broj';
-  const semesterValue = molba.semestar || 'N/A';
-  const academicYearValue = molba.ucebnaGodina || 'N/A';
+  const indexValue = molba.student.brIndeks || (studentProfile ? studentProfile.brIndeks : null) || '-';
+  const majorValue = molba.student.smer || (studentProfile ? studentProfile.smer : null) || '-';
+  const titleValue = sanitizePdfText(molba.naslov) || 'Без наслов';
+  const archiveNumberValue = molba.arhivskiBroj || '-';
+  const semesterValue = molba.semestar || '-';
+  const academicYearValue = molba.ucebnaGodina || '-';
   const submitDateValue = formatDateMk(molba.datum);
-  const descriptionValue = (molba.description || '').trim();
+  const descriptionValue = sanitizePdfText(molba.description);
   const statusValue = molba.status || 'Во процес';
-  const rejectionReasonValue = molba.feedback && molba.feedback.trim() !== '' ? molba.feedback.trim() : '-';
+  const feedbackValue = sanitizePdfText(molba.feedback);
+  const shouldRenderFeedback = statusValue === 'Одбиена' && feedbackValue !== '';
+  const studentLine = [studentName, indexValue, majorValue].filter(Boolean).join(' ');
 
   await new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -107,87 +120,86 @@ const generateArchivePdfFile = async (molba) => {
 
     const regularFont = cyrillicFonts ? 'pdf-regular' : 'Helvetica';
     const boldFont = cyrillicFonts ? 'pdf-bold' : 'Helvetica-Bold';
-    const logoPath = path.join(projectRoot, 'public', 'images', 'feitlogoMolba.png');
+    const ukimLogoPath = path.join(projectRoot, 'public', 'images', 'ukim-logo.png');
+    const feitRightLogoPath = path.join(projectRoot, 'public', 'images', 'feitLogoBrowser.png');
 
-    const drawLabelValue = (x, y, label, value, options = {}) => {
-      const {
-        labelSize = 18,
-        valueSize = 18,
-        maxWidth = 470,
-        lineGap = 3
-      } = options;
-
-      doc.font(boldFont).fontSize(labelSize).fillColor('#000000').text(label, x, y, {
-        continued: true
-      });
-
-      doc.font(regularFont).fontSize(valueSize).text(` ${value}`, {
-        width: maxWidth,
-        lineGap
-      });
-    };
-
-    if (fs.existsSync(logoPath)) {
-      // Place institution logo in the top-left corner.
-      doc.image(logoPath, 56, 48, {
-        fit: [120, 80],
+    if (fs.existsSync(ukimLogoPath)) {
+      doc.image(ukimLogoPath, 52, 52, {
+        fit: [68, 68],
         align: 'left',
         valign: 'top'
       });
     }
 
-    doc.font(boldFont).fontSize(34).fillColor('#000000').text('Молба', 0, 74, {
+    if (fs.existsSync(feitRightLogoPath)) {
+      doc.image(feitRightLogoPath, 492, 52, {
+        fit: [64, 64],
+        align: 'right',
+        valign: 'top'
+      });
+    }
+
+    doc.fillColor('#000000');
+
+    const headerX = 140;
+    const headerWidth = 315;
+
+    doc.font(boldFont).fontSize(14).text('УНИВЕРЗИТЕТ “Св. КИРИЛ И МЕТОДИЈ” -', headerX, 58, {
+      width: headerWidth,
+      align: 'center'
+    });
+    doc.font(boldFont).fontSize(14).text('СКОПЈЕ', headerX, 80, {
+      width: headerWidth,
+      align: 'center'
+    });
+    doc.font(boldFont).fontSize(14).text('ФАКУЛТЕТ ЗА ЕЛЕКТРОТЕХНИКА И', headerX, 110, {
+      width: headerWidth,
+      align: 'center'
+    });
+    doc.font(boldFont).fontSize(14).text('ИНФОРМАЦИСКИ ТЕХНОЛОГИИ', headerX, 132, {
+      width: headerWidth,
       align: 'center'
     });
 
-    drawLabelValue(385, 88, 'Датум:', submitDateValue, {
-      labelSize: 15,
-      valueSize: 15,
-      maxWidth: 160
+    doc.font(boldFont).fontSize(15).text('Датум:', 72, 186, { continued: true });
+    doc.font(regularFont).fontSize(15).text(` ${submitDateValue}`);
+
+    doc.font(boldFont).fontSize(15).text('Архивски број:', 350, 186, { continued: true });
+    doc.font(regularFont).fontSize(15).text(` ${archiveNumberValue}`);
+
+    doc.font(boldFont).fontSize(20).text('Молба', 0, 234, {
+      align: 'center'
     });
 
-    drawLabelValue(385, 116, 'Архивски број:', archiveNumberValue, {
-      labelSize: 15,
-      valueSize: 15,
-      maxWidth: 170
-    });
+    let y = 320;
 
-    drawLabelValue(72, 210, 'Наслов на молбата:', titleValue, {
-      labelSize: 16,
-      valueSize: 16,
-      maxWidth: 470
-    });
+    doc.font(boldFont).fontSize(17).text('Наслов на молбата:', 72, y, { continued: true });
+    doc.font(regularFont).fontSize(17).text(` ${titleValue}`);
+    y += 40;
 
-    drawLabelValue(72, 280, 'Студент:', `${studentName} ${indexValue} ${majorValue}`, {
-      labelSize: 16,
-      valueSize: 16,
-      maxWidth: 470
-    });
+    doc.font(boldFont).fontSize(17).text('Студент:', 72, y, { continued: true });
+    doc.font(regularFont).fontSize(17).text(` ${studentLine}`);
+    y += 40;
 
-    drawLabelValue(72, 310, 'Семестар и учебна година:', `${semesterValue} ${academicYearValue}`, {
-      labelSize: 16,
-      valueSize: 16,
-      maxWidth: 470
-    });
+    doc.font(boldFont).fontSize(17).text('Семестар и учебна година:', 72, y, { continued: true });
+    doc.font(regularFont).fontSize(17).text(` ${semesterValue} ${academicYearValue}`);
+    y += 60;
 
-    drawLabelValue(72, 390, 'Опис на молбата:', descriptionValue || '-', {
-      labelSize: 16,
-      valueSize: 16,
-      maxWidth: 470,
+    doc.font(boldFont).fontSize(17).text('Опис на молбата:', 72, y, { continued: true });
+    doc.font(regularFont).fontSize(17).text(` ${descriptionValue || '-'}`, {
+      width: 450,
       lineGap: 4
     });
 
-    drawLabelValue(72, 720, 'Статус:', statusValue, {
-      labelSize: 16,
-      valueSize: 16,
-      maxWidth: 470
-    });
+    const footerY = Math.max(doc.y + 26, 690);
 
-    if (statusValue === 'Одбиена') {
-      drawLabelValue(72, 750, 'Причина за одбивање:', rejectionReasonValue, {
-        labelSize: 16,
-        valueSize: 16,
-        maxWidth: 470,
+    doc.font(boldFont).fontSize(17).text('Статус:', 72, footerY, { continued: true });
+    doc.font(regularFont).fontSize(17).text(` ${statusValue}`);
+
+    if (shouldRenderFeedback) {
+      doc.font(boldFont).fontSize(17).text('Повратна информација:', 72, footerY + 36, { continued: true });
+      doc.font(regularFont).fontSize(17).text(` ${feedbackValue}`, {
+        width: 450,
         lineGap: 3
       });
     }
@@ -252,6 +264,8 @@ const requiresArchiveNumberBeforeReview = (role) => (
   role === ROLE.STUDENTSKA_SLUZHBA || role === ROLE.PRODEKAN
 );
 
+const newestFirstOrder = [['createdAt', 'DESC'], ['molbaId', 'DESC']];
+
 // GET /dashboard
 exports.getDashboard = async (req, res) => {
   const user = requireAuth(req, res);
@@ -270,6 +284,16 @@ exports.getDashboard = async (req, res) => {
         include: [{ model: Student, as: 'studentProfile' }]
       });
 
+      if (student && student.studentProfile) {
+        user.brIndeks = student.studentProfile.brIndeks || null;
+        user.smer = student.studentProfile.smer || null;
+
+        if (req.session && req.session.user) {
+          req.session.user.brIndeks = user.brIndeks;
+          req.session.user.smer = user.smer;
+        }
+      }
+
       const whereClause = { userId: user.userId };
       if (status && status !== 'site') {
         whereClause.status = status;
@@ -281,7 +305,7 @@ exports.getDashboard = async (req, res) => {
 
       const molbi = await Molba.findAll({
         where: whereClause,
-        order: [['datum', 'DESC']]
+        order: newestFirstOrder
       });
 
       const siteMolbi = await Molba.findAll({ where: { userId: user.userId } });
@@ -321,7 +345,7 @@ exports.getDashboard = async (req, res) => {
     const molbi = await Molba.findAll({
       where: whereClause,
       include: molbaStudentInclude,
-      order: [['datum', 'DESC']]
+      order: newestFirstOrder
     });
 
     const statsWhereClause = {};
@@ -388,7 +412,7 @@ exports.postNovaMolba = async (req, res) => {
   if (!user) return;
 
   try {
-    const { naslov, semestar, ucebnaGodina, description } = req.body;
+    const { naslov, semestar, ucebnaGodina, description, brIndeks, smer } = req.body;
 
     if (!naslov || naslov.trim() === '') {
       req.flash('error', 'Насловот е задолжителен.');
@@ -411,6 +435,16 @@ exports.postNovaMolba = async (req, res) => {
       return res.redirect('/dashboard/nova-molba');
     }
 
+    if (!brIndeks || brIndeks.trim() === '') {
+      req.flash('error', 'Бројот на индекс е задолжителен.');
+      return res.redirect('/dashboard/nova-molba');
+    }
+
+    if (!smer || smer.trim() === '') {
+      req.flash('error', 'Смерот е задолжителен.');
+      return res.redirect('/dashboard/nova-molba');
+    }
+
     const cleanDescription = description && description.trim() !== '' ? description.trim() : '';
     if (!cleanDescription) {
       req.flash('error', 'Текстот на молбата е задолжителен.');
@@ -420,6 +454,18 @@ exports.postNovaMolba = async (req, res) => {
     if (!req.file) {
       req.flash('error', 'Прикачување PDF документ е задолжително.');
       return res.redirect('/dashboard/nova-molba');
+    }
+
+    // Ensure student profile exists and always persist latest index/major for this student.
+    await Student.upsert({
+      userId: user.userId,
+      brIndeks: brIndeks.trim(),
+      smer: smer.trim()
+    });
+
+    if (req.session && req.session.user) {
+      req.session.user.brIndeks = brIndeks.trim();
+      req.session.user.smer = smer.trim();
     }
 
     await Molba.create({
@@ -437,6 +483,11 @@ exports.postNovaMolba = async (req, res) => {
     req.flash('success', 'Молбата е успешно испратена во архива.');
     return res.redirect('/dashboard');
   } catch (error) {
+    if (error && error.name === 'SequelizeUniqueConstraintError') {
+      req.flash('error', 'Бројот на индекс веќе постои. Внесете валиден и уникатен број на индекс.');
+      return res.redirect('/dashboard/nova-molba');
+    }
+
     console.error('Create molba error:', error);
     req.flash('error', 'Настана грешка при креирање на молбата.');
     return res.redirect('/dashboard/nova-molba');
@@ -472,6 +523,13 @@ exports.getMolbaDetail = async (req, res) => {
     if (molba.student) {
       molba.student.setDataValue('brIndeks', molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null);
       molba.student.setDataValue('smer', molba.student.studentProfile ? molba.student.studentProfile.smer : null);
+
+      if (isStudentRole(user.role) && molba.student.userId === user.userId && req.session && req.session.user) {
+        req.session.user.brIndeks = molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null;
+        req.session.user.smer = molba.student.studentProfile ? molba.student.studentProfile.smer : null;
+        user.brIndeks = req.session.user.brIndeks;
+        user.smer = req.session.user.smer;
+      }
     }
 
     return res.render('molba-detail', {
