@@ -184,8 +184,8 @@ const generateArchivePdfFile = async (molba) => {
 
     doc.fillColor('#000000');
 
-    const headerX = 140;
-    const headerWidth = 315;
+    const headerX = 130;
+    const headerWidth = 340;
 
     doc.font(boldFont).fontSize(14).text('УНИВЕРЗИТЕТ “Св. КИРИЛ И МЕТОДИЈ” -', headerX, 58, {
       width: headerWidth,
@@ -204,40 +204,63 @@ const generateArchivePdfFile = async (molba) => {
       align: 'center'
     });
 
-    doc.font(boldFont).fontSize(15).text('Датум:', 72, 186, { continued: true });
-    doc.font(regularFont).fontSize(15).text(` ${submitDateValue}`);
+    doc.font(boldFont).fontSize(13).text('Датум:', 72, 190, { continued: true });
+    doc.font(regularFont).fontSize(13).text(` ${submitDateValue}`);
 
-    doc.font(boldFont).fontSize(15).text('Архивски број:', 350, 186, { continued: true });
-    doc.font(regularFont).fontSize(15).text(` ${archiveNumberValue}`);
+    doc.font(boldFont).fontSize(13).text('Архивски број:', 350, 190, { continued: true });
+    doc.font(regularFont).fontSize(13).text(` ${archiveNumberValue}`);
 
-    doc.font(boldFont).fontSize(20).text('Молба', 0, 234, {
+    doc.font(boldFont).fontSize(18).text('Молба', 0, 245, {
       align: 'center'
     });
 
-    let y = 320;
+    let y = 315;
+    const leftX = 72;
+    const contentWidth = 450;
+    const labelFontSize = 14;
+    const valueFontSize = 14;
 
-    doc.font(boldFont).fontSize(17).text('Наслов на молбата:', 72, y, { continued: true });
-    doc.font(regularFont).fontSize(17).text(` ${titleValue}`);
-    y += 40;
+    doc.font(boldFont).fontSize(labelFontSize).text('Наслов на молбата:', leftX, y, {
+      continued: true
+    });
+    doc.font(regularFont).fontSize(valueFontSize).text(` ${titleValue}`, {
+      width: contentWidth,
+      lineGap: 3
+    });
+    y = doc.y + 14;
 
-    doc.font(boldFont).fontSize(17).text('Студент:', 72, y, { continued: true });
-    doc.font(regularFont).fontSize(17).text(` ${studentLine}`);
-    y += 40;
+    doc.font(boldFont).fontSize(labelFontSize).text('Студент:', leftX, y, {
+      continued: true
+    });
+    doc.font(regularFont).fontSize(valueFontSize).text(` ${studentLine}`, {
+      width: contentWidth,
+      lineGap: 3
+    });
+    y = doc.y + 14;
 
-    doc.font(boldFont).fontSize(17).text('Семестар и учебна година:', 72, y, { continued: true });
-    doc.font(regularFont).fontSize(17).text(` ${semesterValue} ${academicYearValue}`);
-    y += 60;
+    doc.font(boldFont).fontSize(labelFontSize).text('Семестар и учебна година:', leftX, y, {
+      continued: true
+    });
+    doc.font(regularFont).fontSize(valueFontSize).text(` ${semesterValue} ${academicYearValue}`, {
+      width: contentWidth,
+      lineGap: 3
+    });
+    y = doc.y + 18;
 
-    doc.font(boldFont).fontSize(17).text('Опис на молбата:', 72, y, { continued: true });
-    doc.font(regularFont).fontSize(17).text(` ${descriptionValue || '-'}`, {
-      width: 450,
+    doc.font(boldFont).fontSize(labelFontSize).text('Опис на молбата:', leftX, y, {
+      continued: true
+    });
+    doc.font(regularFont).fontSize(valueFontSize).text(` ${descriptionValue || '-'}`, {
+      width: contentWidth,
       lineGap: 4
     });
 
-    const footerY = Math.max(doc.y + 26, 690);
+    const footerY = doc.y + 35;
 
-    doc.font(boldFont).fontSize(17).text('Статус:', 72, footerY, { continued: true });
-    doc.font(regularFont).fontSize(17).text(` ${statusValue}`);
+    doc.font(boldFont).fontSize(labelFontSize).text('Статус:', leftX, footerY, {
+      continued: true
+    });
+    doc.font(regularFont).fontSize(valueFontSize).text(` ${statusValue}`);
 
     if (shouldRenderFeedback) {
       doc.font(boldFont).fontSize(17).text('Повратна информација:', 72, footerY + 36, { continued: true });
@@ -1008,4 +1031,6 @@ exports.downloadStudentDocument = async (req, res) => {
     return res.redirect('/dashboard');
   }
 };
+
+
 
