@@ -9,6 +9,7 @@ const { isEntraConfigured } = require('./config/entraAuth');
 
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const auditLogger = require('./middlewares/auditLogger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +44,9 @@ app.use(session({
 }));
 
 app.use(flash());
+
+// Audit logger: records who did what, when, from which IP
+app.use(auditLogger);
 
 
 app.use('/', authRoutes);

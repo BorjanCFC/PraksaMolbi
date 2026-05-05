@@ -22,7 +22,6 @@
       <div class="dashboard-header">
         <div>
           <h2>Сите молби</h2>
-          <p class="subtitle">Преглед на молби според улога: <strong><%= viewer.roleLabel %></strong></p>
         </div>
       </div>
 
@@ -44,6 +43,32 @@
           <div class="stat-label">Одбиени</div>
         </div>
       </div>
+
+      <% if (isGlobalAdmin) { %>
+        <div class="admin-action-card" style="margin-bottom: 1.5rem; max-width: 100%;">
+          <h3>Додели улога</h3>
+          <form action="/dashboard/assign-role" method="POST">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="assignEmail">Email</label>
+                <input id="assignEmail" name="email" type="email" placeholder="Внеси валидна email адреса" required>
+              </div>
+              <div class="form-group">
+                <label for="assignRole">Улога</label>
+                <select id="assignRole" name="role" class="form-select" required>
+                  <option value="admin">Админ</option>
+                  <option value="studentska_sluzhba">Студентска Служба</option>
+                  <option value="prodekan">Продекан</option>
+                  <option value="arhiva">Архива</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-admin">Зачувај улога</button>
+            </div>
+          </form>
+        </div>
+      <% } %>
 
       <div class="filter-bar">
         <div class="filter-group">
@@ -117,7 +142,7 @@
               <% molbi.forEach((molba) => { %>
                 <tr>
                   <td><%= molba.molbaId %></td>
-                  <td><%= molba.student.ime %> <%= molba.student.prezime %></td>
+                  <td><%= convertNameToCyrillic(molba.student.ime) %> <%= convertNameToCyrillic(molba.student.prezime) %></td>
                   <td><%= molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null) || '-' %></td>
                   <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 70) %><%= (molba.naslov || '').length > 70 ? '...' : '' %></td>
                   <td><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></td>
@@ -141,7 +166,6 @@
       <div class="dashboard-header">
         <div>
           <h2>Мои молби</h2>
-          <p class="subtitle">Поднеси молба со задолжителен наслов, текст и PDF документ</p>
         </div>
         <a href="/dashboard/nova-molba" class="btn btn-primary">+ Нова молба</a>
       </div>

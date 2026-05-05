@@ -16,7 +16,7 @@ const ROLE_TIP = Object.freeze({
 const roleLabelMap = {
   [ROLE.STUDENT]: 'Студент',
   [ROLE.ADMIN]: 'Админ',
-  [ROLE.STUDENTSKA_SLUZHBA]: 'Студентска служба',
+  [ROLE.STUDENTSKA_SLUZHBA]: 'Студентска Служба',
   [ROLE.PRODEKAN]: 'Продекан',
   [ROLE.ARHIVA]: 'Архива'
 };

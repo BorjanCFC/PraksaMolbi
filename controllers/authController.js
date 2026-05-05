@@ -185,7 +185,7 @@ exports.microsoftCallback = async (req, res) => {
     }
 
     if (!isAllowedStudentEmailDomain(email)) {
-      req.flash('error', 'Овој емаил домен не е дозволен за студентска Entra најава.');
+      req.flash('error', 'Овој емаил домен не е дозволен за Entra најава.');
       return res.redirect('/login');
     }
 
@@ -239,9 +239,26 @@ exports.microsoftCallback = async (req, res) => {
       }
     }
 
-    if (!isStudentUser(user)) {
-      req.flash('error', 'Entra најава е дозволена само за студенти.');
+    if (!user) {
+      req.flash('error', 'Корисникот не е пронајден по Entra најава.');
       return res.redirect('/login');
+    }
+
+    const roleContext = resolveRoleContext(user);
+    if (!roleContext.role) {
+      req.flash('error', 'Корисникот нема валидна улога во системот. Контактирајте администратор.');
+      return res.redirect('/login');
+    }
+
+    if (roleContext.role === 'student') {
+      const studentProfile = user.studentProfile || await Student.findOne({ where: { userId: user.userId } });
+      if (!studentProfile) {
+        await Student.create({ userId: user.userId, brIndeks: null, smer: null });
+        user = await User.findOne({
+          where: { userId: user.userId },
+          include: userRoleIncludes
+        });
+      }
     }
 
     req.session.user = buildSessionUser(user);

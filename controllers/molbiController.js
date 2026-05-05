@@ -5,7 +5,8 @@ const PDFDocument = require('pdfkit');
 const {
   Molba,
   User,
-  Student
+  Student,
+  Role
 } = require('../models');
 const {
   ROLE,
@@ -14,6 +15,18 @@ const {
   isStaffRole,
   canManageMolbi
 } = require('../utils/roleHelpers');
+const {
+  sendMolbaCreatedEmail,
+  sendMolbaApprovedEmail,
+  sendMolbaRejectedEmail
+} = require('../utils/emailService');
+const {
+  convertNameToCyrillic
+} = require('../utils/cyrillicConverter');
+const {
+  getStudentDocumentPath,
+  getArchivePath
+} = require('../utils/uploadPathHelper');
 
 const allowedStatuses = new Set(['Во процес', 'Одобрена', 'Одбиена']);
 const allowedSemestri = new Set(['Зимски', 'Летен']);
@@ -32,6 +45,32 @@ const ensureDir = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
+};
+
+const findFileInUploadsByName = (fileName) => {
+  const uploadsRoot = path.join(projectRoot, 'uploads');
+
+  const search = (dirPath) => {
+    if (!fs.existsSync(dirPath)) return null;
+
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+
+      if (entry.isFile() && entry.name === fileName) {
+        return fullPath;
+      }
+
+      if (entry.isDirectory()) {
+        const nested = search(fullPath);
+        if (nested) return nested;
+      }
+    }
+
+    return null;
+  };
+
+  return search(uploadsRoot);
 };
 
 const getWindowsCyrillicFonts = () => {
@@ -73,14 +112,18 @@ const sanitizePdfText = (value) => {
 
 const generateArchivePdfFile = async (molba) => {
   const archiveDir = path.join(projectRoot, archivePdfRelativeDir);
-  ensureDir(archiveDir);
+  const nasoka = molba.student.smer || (molba.student.studentProfile ? molba.student.studentProfile.smer : null) || 'unknown';
+  const relArchivePath = getArchivePath(nasoka, molba.student.ime, molba.student.prezime);
+  const specificArchiveDir = path.join(projectRoot, 'uploads', relArchivePath);
+  
+  ensureDir(specificArchiveDir);
 
   const fileName = `molba-${molba.molbaId}-${Date.now()}.pdf`;
-  const fullPath = path.join(archiveDir, fileName);
-  const relativePath = toPosixPath(path.join('uploads', 'archive', fileName));
+  const fullPath = path.join(specificArchiveDir, fileName);
+  const relativePath = toPosixPath(path.join(relArchivePath, fileName));
 
   const studentProfile = molba.student && molba.student.studentProfile ? molba.student.studentProfile : null;
-  const studentName = `${molba.student.ime} ${molba.student.prezime}`.trim();
+  const studentName = `${convertNameToCyrillic(molba.student.ime)} ${convertNameToCyrillic(molba.student.prezime)}`.trim();
   const indexValue = molba.student.brIndeks || (studentProfile ? studentProfile.brIndeks : null) || '-';
   const majorValue = molba.student.smer || (studentProfile ? studentProfile.smer : null) || '-';
   const titleValue = sanitizePdfText(molba.naslov) || 'Без наслов';
@@ -241,7 +284,30 @@ const requireStaff = (req, res) => {
 const resolveUploadPath = (relativePath) => {
   if (!relativePath) return null;
   const normalized = path.normalize(relativePath);
-  return path.join(projectRoot, normalized);
+
+  const candidates = [];
+
+  if (path.isAbsolute(normalized)) {
+    candidates.push(normalized);
+  } else {
+    if (normalized.startsWith(`uploads${path.sep}`)) {
+      candidates.push(path.join(projectRoot, normalized));
+    } else {
+      candidates.push(
+        path.join(projectRoot, 'uploads', normalized),
+        path.join(projectRoot, normalized)
+      );
+    }
+  }
+
+  for (const candidatePath of candidates) {
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  const fallbackFileName = path.basename(normalized);
+  return findFileInUploadsByName(fallbackFileName);
 };
 
 const addDateFilter = (whereClause, fromDate, toDate) => {
@@ -263,6 +329,40 @@ const addDateFilter = (whereClause, fromDate, toDate) => {
 const requiresArchiveNumberBeforeReview = (role) => (
   role === ROLE.STUDENTSKA_SLUZHBA || role === ROLE.PRODEKAN
 );
+
+const assignableStaffRoles = new Set([
+  ROLE.ADMIN,
+  ROLE.STUDENTSKA_SLUZHBA,
+  ROLE.PRODEKAN,
+  ROLE.ARHIVA
+]);
+
+const roleTipByRole = {
+  [ROLE.ADMIN]: 'Admin',
+  [ROLE.STUDENTSKA_SLUZHBA]: 'Sluzhba',
+  [ROLE.PRODEKAN]: 'Prodekan',
+  [ROLE.ARHIVA]: 'Arhiva'
+};
+
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const toNamePart = (value, fallback) => {
+  const clean = String(value || '').trim();
+  if (!clean) return fallback;
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+};
+
+const deriveNameFromEmail = (email) => {
+  const localPart = (email.split('@')[0] || '').trim();
+  const parts = localPart.split(/[._-]+/).filter(Boolean);
+
+  return {
+    ime: toNamePart(parts[0], 'Корисник'),
+    prezime: toNamePart(parts.slice(1).join(' '), 'Профил')
+  };
+};
 
 const newestFirstOrder = [['createdAt', 'DESC'], ['molbaId', 'DESC']];
 
@@ -314,6 +414,7 @@ exports.getDashboard = async (req, res) => {
         title: 'Dashboard',
         viewer: user,
         getRoleLabel,
+        convertNameToCyrillic,
         isImpersonating: false,
         isStudent: true,
         canManage: false,
@@ -369,8 +470,10 @@ exports.getDashboard = async (req, res) => {
       title: 'Dashboard',
       viewer: user,
       getRoleLabel,
+      convertNameToCyrillic,
       isImpersonating: false,
       isStudent: false,
+      isGlobalAdmin: user.role === ROLE.ADMIN,
       canManage: canManageMolbi(user.role),
       molbi,
       stats: {
@@ -393,6 +496,71 @@ exports.getDashboard = async (req, res) => {
   }
 };
 
+// POST /dashboard/assign-role
+exports.assignRoleByEmail = async (req, res) => {
+  const user = requireStaff(req, res);
+  if (!user) return;
+
+  if (user.role !== ROLE.ADMIN) {
+    req.flash('error', 'Само админ може да доделува улоги.');
+    return res.redirect('/dashboard');
+  }
+
+  try {
+    const email = normalizeEmail(req.body.email);
+    const role = String(req.body.role || '').trim();
+
+    if (!email || !isValidEmail(email)) {
+      req.flash('error', 'Внесете валиден email.');
+      return res.redirect('/dashboard');
+    }
+
+    if (!assignableStaffRoles.has(role)) {
+      req.flash('error', 'Избраната улога не е валидна за доделување.');
+      return res.redirect('/dashboard');
+    }
+
+    const roleTip = roleTipByRole[role];
+    const dbRole = await Role.findOne({ where: { tip: roleTip } });
+    if (!dbRole) {
+      req.flash('error', 'Бараната улога не постои во базата.');
+      return res.redirect('/dashboard');
+    }
+
+    let targetUser = await User.findOne({
+      where: { email },
+      include: [{ model: Student, as: 'studentProfile', required: false }]
+    });
+
+    if (!targetUser) {
+      const nameParts = deriveNameFromEmail(email);
+      targetUser = await User.create({
+        ime: nameParts.ime,
+        prezime: nameParts.prezime,
+        email,
+        password: null,
+        provider: 'microsoft',
+        providerId: null,
+        roleId: dbRole.roleId
+      });
+    } else {
+      targetUser.roleId = dbRole.roleId;
+      await targetUser.save();
+
+      if (targetUser.studentProfile) {
+        await Student.destroy({ where: { userId: targetUser.userId } });
+      }
+    }
+
+    req.flash('success', `Улогата "${getRoleLabel(role)}" е доделена за ${email}.`);
+    return res.redirect('/dashboard');
+  } catch (error) {
+    console.error('Assign role error:', error);
+    req.flash('error', 'Настана грешка при доделување улога.');
+    return res.redirect('/dashboard');
+  }
+};
+
 // GET /dashboard/nova-molba
 exports.getNovaMolba = (req, res) => {
   const user = requireStudent(req, res);
@@ -401,6 +569,8 @@ exports.getNovaMolba = (req, res) => {
   res.render('nova-molba', {
     title: 'Нова молба',
     viewer: user,
+    getRoleLabel,
+    convertNameToCyrillic,
     isImpersonating: false,
     error: req.flash('error')
   });
@@ -441,7 +611,7 @@ exports.postNovaMolba = async (req, res) => {
     }
 
     if (!smer || smer.trim() === '') {
-      req.flash('error', 'Смерот е задолжителен.');
+      req.flash('error', 'Насоката е задолжителна.');
       return res.redirect('/dashboard/nova-molba');
     }
 
@@ -468,7 +638,7 @@ exports.postNovaMolba = async (req, res) => {
       req.session.user.smer = smer.trim();
     }
 
-    await Molba.create({
+    const newMolba = await Molba.create({
       userId: user.userId,
       naslov: naslov.trim(),
       semestar,
@@ -477,10 +647,19 @@ exports.postNovaMolba = async (req, res) => {
       status: 'Во процес',
       datum: new Date(),
       arhivskiBroj: null,
-      urlPath: toPosixPath(path.join('uploads', 'student', req.file.filename))
+      urlPath: toPosixPath(path.join(getStudentDocumentPath(smer.trim(), user.ime, user.prezime), req.file.filename))
     });
 
-    req.flash('success', 'Молбата е успешно испратена во архива.');
+    // Send confirmation email to student (fire-and-forget - don't wait)
+    if (user.email) {
+      const studentFullName = `${user.ime} ${user.prezime}`;
+      console.log('[Controller] Triggering email send for:', user.email);
+      sendMolbaCreatedEmail(user.email, studentFullName, naslov.trim());
+    } else {
+      console.warn('[Controller] User email not found for user:', user.userId);
+    }
+
+    req.flash('success', 'Молбата е успешно пратена.');
     return res.redirect('/dashboard');
   } catch (error) {
     if (error && error.name === 'SequelizeUniqueConstraintError') {
@@ -535,11 +714,13 @@ exports.getMolbaDetail = async (req, res) => {
     return res.render('molba-detail', {
       title: `Молба #${molba.molbaId}`,
       viewer: user,
+      getRoleLabel,
+      convertNameToCyrillic,
       isImpersonating: false,
       isStudent: isStudentRole(user.role),
       canManage: canManageMolbi(user.role),
       canArchiveNumber: user.role === ROLE.ARHIVA,
-      canGenerateArchivePdf: user.role === ROLE.ARHIVA
+      canGenerateMolbaPdf: user.role === ROLE.STUDENTSKA_SLUZHBA
         && (molba.status === 'Одобрена' || molba.status === 'Одбиена')
         && !molba.arhivaPdfPath,
       molba,
@@ -558,8 +739,8 @@ exports.generateArchivePdf = async (req, res) => {
   const user = requireStaff(req, res);
   if (!user) return;
 
-  if (user.role !== ROLE.ARHIVA) {
-    req.flash('error', 'Само архивата може да генерира PDF од молба.');
+  if (user.role !== ROLE.STUDENTSKA_SLUZHBA) {
+    req.flash('error', 'Само студентската служба може да генерира PDF од молба.');
     return res.redirect('/dashboard');
   }
 
@@ -600,6 +781,74 @@ exports.generateArchivePdf = async (req, res) => {
     return res.redirect(`/dashboard/molba/${req.params.id}`);
   } catch (error) {
     console.error('Generate archive pdf error:', error);
+    req.flash('error', 'Настана грешка при генерирање на PDF документот.');
+    return res.redirect(`/dashboard/molba/${req.params.id}`);
+  }
+};
+
+// POST /dashboard/molba/:id/generate-molba-pdf
+exports.generateMolbaPdf = async (req, res) => {
+  const user = requireStaff(req, res);
+  if (!user) return;
+
+  if (user.role !== ROLE.STUDENTSKA_SLUZHBA) {
+    req.flash('error', 'Само студентска служба може да генерира PDF на молба.');
+    return res.redirect('/dashboard');
+  }
+
+  try {
+    const molba = await Molba.findByPk(req.params.id, {
+      include: molbaStudentInclude
+    });
+
+    if (!molba) {
+      req.flash('error', 'Молбата не е пронајдена.');
+      return res.redirect('/dashboard');
+    }
+
+    if (molba.status !== 'Одобрена' && molba.status !== 'Одбиена') {
+      req.flash('error', 'PDF може да се генерира само за одобрена или одбиена молба.');
+      return res.redirect(`/dashboard/molba/${req.params.id}`);
+    }
+
+    if (!molba.arhivskiBroj) {
+      req.flash('error', 'Прво внесете архивски број, па потоа генерирајте PDF.');
+      return res.redirect(`/dashboard/molba/${req.params.id}`);
+    }
+
+    if (molba.arhivaPdfPath) {
+      req.flash('error', 'PDF за оваа молба е веќе генериран.');
+      return res.redirect(`/dashboard/molba/${req.params.id}`);
+    }
+
+    if (molba.student) {
+      molba.student.setDataValue('brIndeks', molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null);
+      molba.student.setDataValue('smer', molba.student.studentProfile ? molba.student.studentProfile.smer : null);
+    }
+
+    molba.arhivaPdfPath = await generateArchivePdfFile(molba);
+    await molba.save();
+
+    // Send email to student (fire-and-forget)
+    if (molba.student && molba.student.email) {
+      const studentFullName = `${molba.student.ime} ${molba.student.prezime}`;
+      
+      if (molba.status === 'Одобрена') {
+        const fullPdfPath = resolveUploadPath(molba.arhivaPdfPath);
+        sendMolbaApprovedEmail(molba.student.email, studentFullName, molba.naslov, fullPdfPath).catch(err => {
+          console.error('[Controller] Background approval email error:', err.message);
+        });
+      } else if (molba.status === 'Одбиена') {
+        sendMolbaRejectedEmail(molba.student.email, studentFullName, molba.naslov, molba.feedback || '').catch(err => {
+          console.error('[Controller] Background rejection email error:', err.message);
+        });
+      }
+    }
+
+    req.flash('success', 'PDF документот е успешно генериран и пратен на студентот.');
+    return res.redirect(`/dashboard/molba/${req.params.id}`);
+  } catch (error) {
+    console.error('Generate molba pdf error:', error);
     req.flash('error', 'Настана грешка при генерирање на PDF документот.');
     return res.redirect(`/dashboard/molba/${req.params.id}`);
   }

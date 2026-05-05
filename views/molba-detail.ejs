@@ -30,7 +30,7 @@
         <div class="detail-row">
           <strong>Студент:</strong>
           <span>
-            <%= molba.student.ime %> <%= molba.student.prezime %>
+            <%= convertNameToCyrillic(molba.student.ime) %> <%= convertNameToCyrillic(molba.student.prezime) %>
             <% const studentBrIndeks = molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null); %>
             <% if (studentBrIndeks) { %>
               <span style="color: #000000c1; margin-left: 1rem;">
@@ -54,7 +54,7 @@
         <% const studentSmer = molba.student.smer || (molba.student.studentProfile ? molba.student.studentProfile.smer : null); %>
         <% if (studentSmer) { %>
           <div class="detail-row">
-            <strong>Смер:</strong>
+            <strong>Насока:</strong>
             <span><%= studentSmer %></span>
           </div>
         <% } %>
@@ -112,17 +112,6 @@
         </div>
       <% } %>
 
-      <% if (canGenerateArchivePdf) { %>
-        <div class="admin-action-card">
-          <h3>Архивски PDF</h3>
-          <p class="subtitle">Генерирај печатлива PDF верзија од одобрена или одбиена молба.</p>
-          <form action="/dashboard/molba/<%= molba.molbaId %>/generate-archive-pdf" method="POST">
-            <div class="form-actions">
-              <button type="submit" class="btn btn-admin">Генерирај PDF</button>
-            </div>
-          </form>
-        </div>
-      <% } %>
 
       <% if (molba.feedback) { %>
         <div class="detail-section feedback-section <%= molba.status === 'Одбиена' ? 'feedback-rejected' : 'feedback-approved' %>">
@@ -153,7 +142,21 @@
             </div>
           </form>
         </div>
-      <% } else { %>
+      <% } %>
+
+      <% if (canGenerateMolbaPdf) { %>
+        <div class="admin-action-card">
+          <h3>Генерирање на PDF</h3>
+          <p class="subtitle">Генерирај PDF и пратај email на студентот.</p>
+          <form action="/dashboard/molba/<%= molba.molbaId %>/generate-molba-pdf" method="POST">
+            <div class="form-actions">
+              <button type="submit" class="btn btn-admin">Генерирај PDF</button>
+            </div>
+          </form>
+        </div>
+      <% } %>
+
+      <% if (!canManage && !canGenerateMolbaPdf) { %>
         <div class="detail-actions">
           <a href="/dashboard" class="btn btn-secondary">← Назад кон Dashboard</a>
         </div>

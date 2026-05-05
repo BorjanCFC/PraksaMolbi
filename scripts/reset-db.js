@@ -1,10 +1,41 @@
 const sequelize = require('../config/database');
 const { User, Molba, Student, Role } = require('../models');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+
+const deletePdfFilesRecursive = (dirPath) => {
+  if (!fs.existsSync(dirPath)) return 0;
+
+  let deletedCount = 0;
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      deletedCount += deletePdfFilesRecursive(fullPath);
+      continue;
+    }
+
+    if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.pdf') {
+      fs.unlinkSync(fullPath);
+      deletedCount += 1;
+      console.log(`🗑️  Izbrisan PDF: ${fullPath}`);
+    }
+  }
+
+  return deletedCount;
+};
 
 const resetDatabase = async () => {
   try {
     console.log('🔄 Počnuva reset na baza...\n');
+
+    const deletedPdfCount = deletePdfFilesRecursive(uploadsDir);
+    console.log(`\n🧹 Izbrisani se ${deletedPdfCount} PDF fajlovi od uploads.`);
 
     // List of all tables to drop
     const tables = ['Molbas', 'Students', 'Users', 'Roles'];

@@ -108,12 +108,27 @@
           <p class="welcome-subtitle">Најавете се со вашиот студентски Microsoft акаунт</p>
         </div>
         <% if (entraEnabled) { %>
-          <a href="/auth/microsoft" class="btn btn-microsoft btn-full">
+          <a href="/auth/microsoft" class="btn btn-primary btn-full">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
               <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/>
             </svg>
             Најава со Microsoft
           </a>
+
+          <div style="margin-top: 14px; text-align: center;">
+            <p style="font-size: 13px; color: #5a6a7a; margin-bottom: 10px;">
+              Немате студентски account? Креирајте го овде.
+            </p>
+            <a
+              href="https://signup.microsoft.com/get-started/signup?sku=018f6278-19f3-455c-8940-df2e59e59ca7&products=018f6278-19f3-455c-8940-df2e59e59ca7&ali=1&culture=en-us&country=us"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary btn-full"
+              style="display: inline-block;"
+            >
+              Креирај account / Регистрирај се
+            </a>
+          </div>
         <% } else { %>
           <div class="alert alert-error">
             ⚠️ Microsoft Entra не е конфигуриран во апликацијата.

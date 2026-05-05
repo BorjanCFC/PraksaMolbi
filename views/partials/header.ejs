@@ -8,12 +8,25 @@
       </a>
       <nav>
         <% if (viewer) { %>
+          <% const roleLabelFallbackMap = {
+            admin: 'Админ - ФЕИТ',
+            studentska_sluzhba: 'Студентска Служба - ФЕИТ',
+            prodekan: 'Продекан - ФЕИТ',
+            arhiva: 'Архива - ФЕИТ',
+            student: 'Студент'
+          }; %>
+          <% const displayRoleLabel = (viewer.role && roleLabelFallbackMap[viewer.role]) || ((typeof getRoleLabel === 'function' && viewer.role) ? getRoleLabel(viewer.role) : viewer.roleLabel); %>
+          <% const isStaffRole = viewer.role === 'arhiva' || viewer.role === 'prodekan' || viewer.role === 'admin' || viewer.role === 'studentska_sluzhba'; %>
           <span class="nav-user">
-            <%= viewer.ime %> <%= viewer.prezime %>
-            <% if (viewer.brIndeks) { %>
-              (<%= viewer.brIndeks %>)
+            <% if (isStaffRole) { %>
+              <%= displayRoleLabel %>
+            <% } else { %>
+              <%= convertNameToCyrillic(viewer.ime) %> <%= convertNameToCyrillic(viewer.prezime) %>
+              <% if (viewer.brIndeks) { %>
+                (<%= viewer.brIndeks %>)
+              <% } %>
+              - <%= displayRoleLabel %>
             <% } %>
-            - <%= viewer.roleLabel %>
           </span>
         <% } %>
 
