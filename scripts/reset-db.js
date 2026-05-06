@@ -1,6 +1,5 @@
 const sequelize = require('../config/database');
-const { User, Molba, Student, Role } = require('../models');
-const bcrypt = require('bcryptjs');
+const { Role } = require('../models');
 const fs = require('fs');
 const path = require('path');
 
@@ -23,7 +22,7 @@ const deletePdfFilesRecursive = (dirPath) => {
     if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.pdf') {
       fs.unlinkSync(fullPath);
       deletedCount += 1;
-      console.log(`🗑️  Izbrisan PDF: ${fullPath}`);
+      console.log(`Izbrisan PDF: ${fullPath}`);
     }
   }
 
@@ -32,57 +31,39 @@ const deletePdfFilesRecursive = (dirPath) => {
 
 const resetDatabase = async () => {
   try {
-    console.log('🔄 Počnuva reset na baza...\n');
+    console.log('Pocnuva reset na baza...\n');
 
     const deletedPdfCount = deletePdfFilesRecursive(uploadsDir);
-    console.log(`\n🧹 Izbrisani se ${deletedPdfCount} PDF fajlovi od uploads.`);
+    console.log(`Izbrisani se ${deletedPdfCount} PDF fajlovi od uploads.\n`);
 
-    // List of all tables to drop
-    const tables = ['Molbas', 'Students', 'Users', 'Roles'];
+    console.log('Gi brisam i kreiram tabelite...\n');
 
-    // Drop tables explicitly with cascade
-    for (const table of tables) {
-      try {
-        await sequelize.getQueryInterface().dropTable(table, { cascade: true });
-        console.log(`✅ Tabela "${table}" izbrisana.`);
-      } catch (err) {
-        console.log(`⚠️  Tabela "${table}" ne postoi ili greška: ${err.message}`);
-      }
+    await sequelize.sync({ force: true });
+
+    console.log('Tabelite se uspesno kreirani.\n');
+
+    console.log('Kreiram osnovni roles...\n');
+
+    const roles = [
+      'Student',
+      'Admin',
+      'Sluzhba',
+      'Prodekan',
+      'Arhiva'
+    ];
+
+    for (const tip of roles) {
+      await Role.create({ tip });
+      console.log(`Kreirana uloga: ${tip}`);
     }
 
-    console.log('\n🔧 Kreiram nove tabele...\n');
-    await sequelize.sync({ force: true });
-    console.log('✅ Nove tabele kreirane.\n');
+    console.log('\nBaza e uspesno resetirana.');
+    console.log('Ne e kreiran lokalen admin account.');
+    console.log('Ako ti treba bootstrap admin, pusti: npm run init-admin\n');
 
-    // Create default roles
-    console.log('📋 Kreiram roles...');
-    const adminRole = await Role.create({
-      tip: 'Admin'
-    });
-    console.log('✅ Admin roles kreirana.');
-
-    const studentRole = await Role.create({
-      tip: 'Student'
-    });
-    console.log('✅ Student roles kreirana.\n');
-
-    // Create admin user
-    console.log('👤 Kreiram admin korisnik...');
-    const hashedPassword = await bcrypt.hash('password123', 10);
-    const adminUser = await User.create({
-      ime: 'Админ',
-      prezime: 'Систем',
-      email: 'admin@university.mk',
-      password: hashedPassword,
-      roleId: adminRole.roleId,
-      provider: 'local'
-    });
-    console.log('✅ Admin korisnik kreiran (admin@university.mk / password123)\n');
-
-    console.log('✨ Baza e uspesno resetirana!\n');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Greška pri resetu:', error.message);
+    console.error('Greska pri reset:', error.message);
     console.error(error);
     process.exit(1);
   }

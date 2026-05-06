@@ -44,31 +44,48 @@
         </div>
       </div>
 
-      <% if (isGlobalAdmin) { %>
-        <div class="admin-action-card" style="margin-bottom: 1.5rem; max-width: 100%;">
-          <h3>Додели улога</h3>
-          <form action="/dashboard/assign-role" method="POST">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="assignEmail">Email</label>
-                <input id="assignEmail" name="email" type="email" placeholder="Внеси валидна email адреса" required>
-              </div>
-              <div class="form-group">
-                <label for="assignRole">Улога</label>
-                <select id="assignRole" name="role" class="form-select" required>
-                  <option value="admin">Админ</option>
-                  <option value="studentska_sluzhba">Студентска Служба</option>
-                  <option value="prodekan">Продекан</option>
-                  <option value="arhiva">Архива</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn btn-admin">Зачувај улога</button>
-            </div>
-          </form>
+     <% if (isGlobalAdmin) { %>
+  <div class="admin-action-card" style="margin-bottom: 1.5rem; max-width: 100%;">
+    <h3>Додели улога</h3>
+
+    <form action="/dashboard/assign-role" method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="assignEmail">Email</label>
+          <input
+            id="assignEmail"
+            name="email"
+            type="email"
+            placeholder="Внеси валидна email адреса"
+            required
+          >
         </div>
-      <% } %>
+
+        <div class="form-group">
+          <label for="assignRole">Улога</label>
+          <select id="assignRole" name="role" class="form-select" required>
+            <option value="admin">Админ</option>
+            <option value="studentska_sluzhba">Студентска Служба</option>
+            <option value="prodekan">Продекан</option>
+            <option value="arhiva">Архива</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="assignAuthServer">Mail server</label>
+          <select id="assignAuthServer" name="authServer" class="form-select" required>
+            <option value="smail">smail.feit.ukim.edu.mk</option>
+            <option value="makedon">makedon.feit.ukim.edu.mk</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-admin">Зачувај улога</button>
+      </div>
+    </form>
+  </div>
+<% } %>
 
       <div class="filter-bar">
         <div class="filter-group">

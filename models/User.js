@@ -42,9 +42,17 @@ const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: 'local',
     validate: {
-      isIn: [['local', 'microsoft']]
+      isIn: [['local', 'microsoft', 'feit_pop3']]
     }
   },
+  authServer: {
+  type: DataTypes.STRING,
+  allowNull: false,
+  defaultValue: 'smail',
+  validate: {
+    isIn: [['smail', 'makedon']]
+  }
+},
   providerId: {
     type: DataTypes.STRING,
     allowNull: true,

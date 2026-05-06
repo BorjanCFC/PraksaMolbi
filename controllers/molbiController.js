@@ -371,6 +371,19 @@ const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+const isAllowedStaffEmailDomain = (email) => {
+  const raw = process.env.FEIT_STAFF_ALLOWED_EMAIL_DOMAINS || 'feit.ukim.edu.mk';
+
+  const allowedDomains = raw
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+
+  const domain = (email.split('@')[1] || '').toLowerCase();
+
+  return allowedDomains.includes(domain);
+};
+
 const toNamePart = (value, fallback) => {
   const clean = String(value || '').trim();
   if (!clean) return fallback;
@@ -533,8 +546,20 @@ exports.assignRoleByEmail = async (req, res) => {
     const email = normalizeEmail(req.body.email);
     const role = String(req.body.role || '').trim();
 
+    const authServer = String(req.body.authServer || 'smail').trim();
+
+    if (!['smail', 'makedon'].includes(authServer)) {
+      req.flash('error', 'Избран е невалиден mail server.');
+      return res.redirect('/dashboard');
+    }
+
     if (!email || !isValidEmail(email)) {
       req.flash('error', 'Внесете валиден email.');
+      return res.redirect('/dashboard');
+    }
+
+    if (!isAllowedStaffEmailDomain(email)) {
+      req.flash('error', 'За административни улоги дозволени се само FEIT email адреси.');
       return res.redirect('/dashboard');
     }
 
@@ -544,38 +569,64 @@ exports.assignRoleByEmail = async (req, res) => {
     }
 
     const roleTip = roleTipByRole[role];
-    const dbRole = await Role.findOne({ where: { tip: roleTip } });
+
+    const dbRole = await Role.findOne({
+      where: { tip: roleTip }
+    });
+
     if (!dbRole) {
       req.flash('error', 'Бараната улога не постои во базата.');
       return res.redirect('/dashboard');
     }
 
     let targetUser = await User.findOne({
-      where: { email },
-      include: [{ model: Student, as: 'studentProfile', required: false }]
-    });
+  where: {
+    email,
+    provider: 'feit_pop3'
+  },
+  include: [
+    {
+      model: Student,
+      as: 'studentProfile',
+      required: false
+    }
+  ]
+});
 
     if (!targetUser) {
       const nameParts = deriveNameFromEmail(email);
+
       targetUser = await User.create({
-        ime: nameParts.ime,
+       ime: nameParts.ime,
         prezime: nameParts.prezime,
         email,
         password: null,
-        provider: 'microsoft',
+        provider: 'feit_pop3',
         providerId: null,
+        authServer,
         roleId: dbRole.roleId
       });
     } else {
-      targetUser.roleId = dbRole.roleId;
-      await targetUser.save();
+      await targetUser.update({
+        roleId: dbRole.roleId,
+        password: null,
+        provider: 'feit_pop3',
+        providerId: null,
+        authServer
+      }); 
 
       if (targetUser.studentProfile) {
-        await Student.destroy({ where: { userId: targetUser.userId } });
+        await Student.destroy({
+          where: { userId: targetUser.userId }
+        });
       }
     }
 
-    req.flash('success', `Улогата "${getRoleLabel(role)}" е доделена за ${email}.`);
+    req.flash(
+      'success',
+      `Улогата "${getRoleLabel(role)}" е доделена за ${email}.`
+    );
+
     return res.redirect('/dashboard');
   } catch (error) {
     console.error('Assign role error:', error);
