@@ -114,19 +114,75 @@ const sendMolbaCreatedEmail = async (studentEmail, studentName, molbaTitle) => {
 
   return sendMail({
     to: studentEmail,
-    subject: 'Молбата е успешно примена',
+    subject: 'Потврда за успешно поднесена молба',
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Молбата е успешно примена</h2>
-        <p>Добар ден ${safeStudentName},</p>
-        <p>Вашата молба <strong>"${safeMolbaTitle}"</strong> е успешно примена и ќе се обработи.</p>
-        <p>Ве молиме почекајте за дополнителни информации.</p>
-        <br/>
-        <p>Студентска служба ФЕИТ</p>
+      <div style="
+        max-width: 650px;
+        margin: 0 auto;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #333333;
+        line-height: 1.6;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        overflow: hidden;
+      ">
+
+        <div style="
+          background-color: #f4f6f8;
+          padding: 24px 30px;
+          border-bottom: 1px solid #e5e5e5;
+        ">
+          <h2 style="
+            margin: 0;
+            font-size: 22px;
+            color: #222222;
+          ">
+            Потврда за успешно поднесена молба
+          </h2>
+        </div>
+
+        <div style="padding: 30px;">
+          <p>Почитуван/а ${safeStudentName},</p>
+
+          <p>
+            Ве известуваме дека Вашата молба со наслов
+            <strong>„${safeMolbaTitle}“</strong>
+            е успешно поднесена и е евидентирана во системот.
+          </p>
+
+          <p>
+            Молбата ќе биде разгледана од страна на надлежните служби
+            согласно утврдената постапка.
+          </p>
+
+          <p>
+            По завршувањето на постапката, ќе добиете дополнително
+            известување.
+          </p>
+
+          <p style="margin-top: 30px;">
+            Со почит,<br/>
+            <strong>Студентска служба</strong><br/>
+            Факултет за електротехника и информациски технологии – Скопје
+          </p>
+        </div>
+
+        <div style="
+          background-color: #f8f8f8;
+          padding: 15px 30px;
+          font-size: 12px;
+          color: #777777;
+          border-top: 1px solid #e5e5e5;
+        ">
+          Оваа порака е автоматски генерирана од системот за електронско
+          поднесување и обработка на студентски молби.
+        </div>
+
       </div>
     `
   });
 };
+
 
 /**
  * Send email to student when molba is approved with PDF attachment
@@ -140,15 +196,65 @@ const sendMolbaApprovedEmail = async (studentEmail, studentName, molbaTitle, pdf
 
   return sendMail({
     to: studentEmail,
-    subject: 'Молбата е одобрена',
+    subject: 'Известување за одобрена молба',
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Молбата е одобрена</h2>
-        <p>Добар ден ${safeStudentName},</p>
-        <p>Вашата молба <strong>"${safeMolbaTitle}"</strong> е одобрена.</p>
-        <p>Во прилог го испраќаме генерираниот PDF документ.</p>
-        <br/>
-        <p>Студентска служба ФЕИТ</p>
+      <div style="
+        max-width: 650px;
+        margin: 0 auto;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #333333;
+        line-height: 1.6;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        overflow: hidden;
+      ">
+
+        <div style="
+          background-color: #f4f6f8;
+          padding: 24px 30px;
+          border-bottom: 1px solid #e5e5e5;
+        ">
+          <h2 style="
+            margin: 0;
+            font-size: 22px;
+            color: #222222;
+          ">
+            Известување за одобрена молба
+          </h2>
+        </div>
+
+        <div style="padding: 30px;">
+          <p>Почитуван/а ${safeStudentName},</p>
+
+          <p>
+            Ве известуваме дека Вашата молба со наслов
+            <strong>„${safeMolbaTitle}“</strong>
+            е разгледана и <strong>одобрена</strong>.
+          </p>
+
+          <p>
+            Во прилог на оваа порака Ви го доставуваме официјално
+            генерираниот PDF документ поврзан со Вашата молба.
+          </p>
+
+          <p style="margin-top: 30px;">
+            Со почит,<br/>
+            <strong>Студентска служба</strong><br/>
+            Факултет за електротехника и информациски технологии – Скопје
+          </p>
+        </div>
+
+        <div style="
+          background-color: #f8f8f8;
+          padding: 15px 30px;
+          font-size: 12px;
+          color: #777777;
+          border-top: 1px solid #e5e5e5;
+        ">
+          Оваа порака е автоматски генерирана од системот за електронско
+          поднесување и обработка на студентски молби.
+        </div>
+
       </div>
     `,
     attachments: [
@@ -160,10 +266,16 @@ const sendMolbaApprovedEmail = async (studentEmail, studentName, molbaTitle, pdf
   });
 };
 
+
 /**
  * Send email to student when molba is rejected
  */
-const sendMolbaRejectedEmail = async (studentEmail, studentName, molbaTitle, feedback) => {
+const sendMolbaRejectedEmail = async (
+  studentEmail,
+  studentName,
+  molbaTitle,
+  feedback
+) => {
   console.log(`[EmailService] Preparing to send "molba rejected" email to: ${studentEmail}`);
 
   const cyrillicName = convertNameToCyrillic(studentName);
@@ -173,28 +285,86 @@ const sendMolbaRejectedEmail = async (studentEmail, studentName, molbaTitle, fee
 
   return sendMail({
     to: studentEmail,
-    subject: 'Молбата е одбиена',
+    subject: 'Известување за одбиена молба',
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Молбата е одбиена</h2>
-        <p>Добар ден ${safeStudentName},</p>
-        <p>За жал, вашата молба <strong>"${safeMolbaTitle}"</strong> е одбиена.</p>
-        ${
-          safeFeedback
-            ? `<p><strong>Причина:</strong></p><p>${safeFeedback}</p>`
-            : ''
-        }
-        <br/>
-        <p>За дополнителни информации, контактирајте ја студентската служба.</p>
-        <br/>
-        <p>Студентска служба ФЕИТ</p>
+      <div style="
+        max-width: 650px;
+        margin: 0 auto;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #333333;
+        line-height: 1.6;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        overflow: hidden;
+      ">
+
+        <div style="
+          background-color: #f4f6f8;
+          padding: 24px 30px;
+          border-bottom: 1px solid #e5e5e5;
+        ">
+          <h2 style="
+            margin: 0;
+            font-size: 22px;
+            color: #222222;
+          ">
+            Известување за одбиена молба
+          </h2>
+        </div>
+
+        <div style="padding: 30px;">
+          <p>Почитуван/а ${safeStudentName},</p>
+
+          <p>
+            Ве известуваме дека Вашата молба со наслов
+            <strong>„${safeMolbaTitle}“</strong>
+            е разгледана од страна на надлежните служби и не е одобрена.
+          </p>
+
+          ${
+            safeFeedback
+              ? `
+                <div style="
+                  margin: 24px 0;
+                  padding: 18px 20px;
+                  background-color: #f7f7f7;
+                  border-left: 4px solid #999999;
+                  border-radius: 4px;
+                ">
+                  <strong>Образложение:</strong>
+                  <p style="margin-bottom: 0;">
+                    ${safeFeedback}
+                  </p>
+                </div>
+              `
+              : ''
+          }
+
+          <p>
+            Доколку Ви се потребни дополнителни информации во врска со
+            донесената одлука, можете да се обратите до Студентската служба
+            на ФЕИТ.
+          </p>
+
+          <p style="margin-top: 30px;">
+            Со почит,<br/>
+            <strong>Студентска служба</strong><br/>
+            Факултет за електротехника и информациски технологии – Скопје
+          </p>
+        </div>
+
+        <div style="
+          background-color: #f8f8f8;
+          padding: 15px 30px;
+          font-size: 12px;
+          color: #777777;
+          border-top: 1px solid #e5e5e5;
+        ">
+          Оваа порака е автоматски генерирана од системот за електронско
+          поднесување и обработка на студентски молби.
+        </div>
+
       </div>
     `
   });
-};
-
-module.exports = {
-  sendMolbaCreatedEmail,
-  sendMolbaApprovedEmail,
-  sendMolbaRejectedEmail
 };

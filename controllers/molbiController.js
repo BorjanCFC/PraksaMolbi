@@ -183,40 +183,43 @@ const findFileInUploadsByName = (
 };
 
 
-const getWindowsCyrillicFonts = () => {
-
+const getCyrillicFonts = () => {
   const candidates = [
+    // Windows - local development
     {
-      regular:
-        'C:/Windows/Fonts/times.ttf',
-
-      bold:
-        'C:/Windows/Fonts/timesbd.ttf'
+      regular: 'C:/Windows/Fonts/times.ttf',
+      bold: 'C:/Windows/Fonts/timesbd.ttf'
+    },
+    {
+      regular: 'C:/Windows/Fonts/arial.ttf',
+      bold: 'C:/Windows/Fonts/arialbd.ttf'
+    },
+    {
+      regular: 'C:/Windows/Fonts/segoeui.ttf',
+      bold: 'C:/Windows/Fonts/segoeuib.ttf'
     },
 
+    // Linux - production server
     {
-      regular:
-        'C:/Windows/Fonts/arial.ttf',
-
-      bold:
-        'C:/Windows/Fonts/arialbd.ttf'
-    },
-
-    {
-      regular:
-        'C:/Windows/Fonts/segoeui.ttf',
-
-      bold:
-        'C:/Windows/Fonts/segoeuib.ttf'
+      regular: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+      bold: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
     }
   ];
 
+  const fontSet = candidates.find((item) => {
+    return (
+      fs.existsSync(item.regular) &&
+      fs.existsSync(item.bold)
+    );
+  });
 
-  return candidates.find(
-    (fontSet) =>
-      fs.existsSync(fontSet.regular) &&
-      fs.existsSync(fontSet.bold)
-  ) || null;
+  if (!fontSet) {
+    throw new Error(
+      'Не е пронајден font со поддршка за кирилица.'
+    );
+  }
+
+  return fontSet;
 };
 
 
@@ -501,35 +504,20 @@ const generateArchivePdfFile =
         doc.pipe(stream);
 
 
-        const cyrillicFonts =
-          getWindowsCyrillicFonts();
+        const cyrillicFonts = getCyrillicFonts();
 
+doc.registerFont(
+  'pdf-regular',
+  cyrillicFonts.regular
+);
 
-        if (cyrillicFonts) {
+doc.registerFont(
+  'pdf-bold',
+  cyrillicFonts.bold
+);
 
-          doc.registerFont(
-            'pdf-regular',
-            cyrillicFonts.regular
-          );
-
-
-          doc.registerFont(
-            'pdf-bold',
-            cyrillicFonts.bold
-          );
-        }
-
-
-        const regularFont =
-          cyrillicFonts
-            ? 'pdf-regular'
-            : 'Helvetica';
-
-
-        const boldFont =
-          cyrillicFonts
-            ? 'pdf-bold'
-            : 'Helvetica-Bold';
+const regularFont = 'pdf-regular';
+const boldFont = 'pdf-bold';
 
 
         const ukimLogoPath =
