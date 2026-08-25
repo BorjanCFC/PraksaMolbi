@@ -2,19 +2,49 @@ const User = require('./User');
 const Molba = require('./Molba');
 const Student = require('./Student');
 const Role = require('./Role');
+const UserRole = require('./UserRole');
 
-User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
-Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
+// User <-> Role M:N
+User.belongsToMany(Role, {
+  through: UserRole,
+  foreignKey: 'userId',
+  otherKey: 'roleId',
+  as: 'roles'
+});
 
-User.hasOne(Student, { foreignKey: 'userId', as: 'studentProfile' });
-Student.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Role.belongsToMany(User, {
+  through: UserRole,
+  foreignKey: 'roleId',
+  otherKey: 'userId',
+  as: 'users'
+});
 
-User.hasMany(Molba, { foreignKey: 'userId', as: 'molbi' });
-Molba.belongsTo(User, { foreignKey: 'userId', as: 'student' });
+// User <-> Student
+User.hasOne(Student, {
+  foreignKey: 'userId',
+  as: 'studentProfile'
+});
+
+Student.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+// User <-> Molba
+User.hasMany(Molba, {
+  foreignKey: 'userId',
+  as: 'molbi'
+});
+
+Molba.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'student'
+});
 
 module.exports = {
-	User,
-	Molba,
-	Student,
-	Role
+  User,
+  Molba,
+  Student,
+  Role,
+  UserRole
 };

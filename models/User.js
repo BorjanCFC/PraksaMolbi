@@ -7,24 +7,17 @@ const User = sequelize.define('User', {
     primaryKey: true,
     autoIncrement: true
   },
-  roleId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'roles',
-      key: 'roleId'
-    },
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE'
-  },
+
   ime: {
     type: DataTypes.STRING,
     allowNull: false
   },
+
   prezime: {
     type: DataTypes.STRING,
     allowNull: false
   },
+
   email: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -33,10 +26,12 @@ const User = sequelize.define('User', {
       isEmail: true
     }
   },
+
   password: {
     type: DataTypes.STRING,
     allowNull: true
   },
+
   provider: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -45,14 +40,16 @@ const User = sequelize.define('User', {
       isIn: [['local', 'microsoft', 'feit_pop3']]
     }
   },
+
   authServer: {
-  type: DataTypes.STRING,
-  allowNull: false,
-  defaultValue: 'smail',
-  validate: {
-    isIn: [['smail', 'makedon']]
-  }
-},
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'smail',
+    validate: {
+      isIn: [['smail', 'makedon']]
+    }
+  },
+
   providerId: {
     type: DataTypes.STRING,
     allowNull: true,

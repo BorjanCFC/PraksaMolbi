@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Избор на улога — Систем за електронско поднесување молби</title>
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="/images/feitLogoBrowser.png"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/css/style.css"
+  >
+
+  <style>
+    /* =====================================================
+       ROLE SELECTION
+    ===================================================== */
+
+    .role-select-card {
+      width: 100%;
+      max-width: 520px;
+      padding-bottom: 30px;
+    }
+
+    .role-select-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .role-select-header h2 {
+      color: #06467e;
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .role-select-description {
+      text-align: center;
+      color: #617287;
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 0 5px 24px;
+    }
+
+    /* =====================================================
+       USER INFO
+    ===================================================== */
+
+    .role-user-info {
+      background: linear-gradient(
+        135deg,
+        #f3f7fb 0%,
+        #edf3f8 100%
+      );
+
+      border: 1px solid #e1e9f0;
+      border-radius: 12px;
+
+      padding: 15px 18px;
+      margin-bottom: 25px;
+
+      text-align: center;
+
+      color: #42566d;
+      font-size: 14px;
+    }
+
+    .role-user-info strong {
+      color: #06467e;
+      font-weight: 700;
+    }
+
+    /* =====================================================
+       ROLE BUTTONS
+    ===================================================== */
+
+    .role-list {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+      width: 100%;
+    }
+
+    .role-form {
+      width: 100%;
+      margin: 0;
+    }
+
+    .role-button {
+      position: relative;
+
+      width: 100%;
+      min-height: 66px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      padding: 17px 20px;
+
+      background: #ffffff;
+
+      border: 2px solid #dce6ef;
+      border-radius: 12px;
+
+      color: #06467e;
+
+      cursor: pointer;
+
+      font-family: inherit;
+
+      transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .role-button::after {
+      content: "→";
+
+      font-size: 22px;
+      font-weight: 600;
+
+      color: #8ba5bb;
+
+      opacity: 0;
+
+      transform: translateX(-6px);
+
+      transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        color 0.2s ease;
+    }
+
+    .role-button:hover {
+      border-color: #0784d5;
+
+      background:
+        linear-gradient(
+          135deg,
+          #f7fbff 0%,
+          #edf7fd 100%
+        );
+
+      box-shadow:
+        0 7px 18px rgba(0, 91, 156, 0.12);
+
+      transform: translateY(-2px);
+    }
+
+    .role-button:hover::after {
+      opacity: 1;
+      transform: translateX(0);
+      color: #0784d5;
+    }
+
+    .role-button:active {
+      transform: translateY(0);
+      box-shadow:
+        0 3px 9px rgba(0, 91, 156, 0.10);
+    }
+
+    .role-button:focus-visible {
+      outline: 3px solid rgba(0, 132, 213, 0.22);
+      outline-offset: 2px;
+      border-color: #0784d5;
+    }
+
+    .role-name {
+      display: block;
+
+      color: #06467e;
+
+      font-size: 17px;
+      font-weight: 700;
+
+      text-align: left;
+    }
+
+    /* =====================================================
+       ACTIVE / HOVER VISUAL ACCENT
+    ===================================================== */
+
+    .role-button:hover .role-name {
+      color: #006cb7;
+    }
+
+    /* =====================================================
+       LOGOUT
+    ===================================================== */
+
+    .role-logout-wrapper {
+      margin-top: 26px;
+    }
+
+    .role-logout {
+      width: 100%;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      padding: 13px 20px;
+
+      border: 1px solid #d9e4ed;
+      border-radius: 10px;
+
+      background: #f7f9fb;
+
+      color: #526779;
+
+      font-size: 14px;
+      font-weight: 600;
+
+      text-decoration: none;
+
+      transition:
+        color 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .role-logout:hover {
+      color: #a82727;
+
+      background: #fff6f6;
+      border-color: #efcaca;
+
+      box-shadow:
+        0 5px 14px rgba(170, 40, 40, 0.08);
+
+      transform: translateY(-1px);
+    }
+
+    .role-logout:active {
+      transform: translateY(0);
+    }
+
+    /* =====================================================
+       ERROR
+    ===================================================== */
+
+    .role-error {
+      margin-bottom: 20px;
+    }
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+
+    @media (max-width: 600px) {
+      .role-select-card {
+        max-width: calc(100% - 30px);
+      }
+
+      .role-select-header h2 {
+        font-size: 21px;
+      }
+
+      .role-select-description {
+        font-size: 14px;
+      }
+
+      .role-user-info {
+        font-size: 13px;
+      }
+
+      .role-button {
+        min-height: 60px;
+        padding: 15px 17px;
+      }
+
+      .role-name {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-wrapper">
+
+    <!-- ===================================================
+         FLOATING BACKGROUND SHAPES
+    ==================================================== -->
+
+    <div class="floating-shapes">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+
+    <!-- ===================================================
+         LIGHTNING BOLTS
+    ==================================================== -->
+
+    <div class="lightning-bolts">
+
+      <div class="lightning-bolt">
+        <svg viewBox="0 0 40 80" fill="none">
+          <polygon
+            points="22,0 8,35 18,35 10,80 35,30 24,30 32,0"
+            fill="rgba(255,220,100,0.7)"
+          />
+        </svg>
+      </div>
+
+      <div class="lightning-bolt">
+        <svg viewBox="0 0 40 80" fill="none">
+          <polygon
+            points="22,0 8,35 18,35 10,80 35,30 24,30 32,0"
+            fill="rgba(180,210,255,0.6)"
+          />
+        </svg>
+      </div>
+
+      <div class="lightning-bolt">
+        <svg viewBox="0 0 40 80" fill="none">
+          <polygon
+            points="22,0 8,35 18,35 10,80 35,30 24,30 32,0"
+            fill="rgba(255,220,100,0.5)"
+          />
+        </svg>
+      </div>
+
+      <div class="lightning-bolt">
+        <svg viewBox="0 0 40 80" fill="none">
+          <polygon
+            points="22,0 8,35 18,35 10,80 35,30 24,30 32,0"
+            fill="rgba(180,210,255,0.5)"
+          />
+        </svg>
+      </div>
+
+      <div class="lightning-bolt">
+        <svg viewBox="0 0 40 80" fill="none">
+          <polygon
+            points="22,0 8,35 18,35 10,80 35,30 24,30 32,0"
+            fill="rgba(255,220,100,0.6)"
+          />
+        </svg>
+      </div>
+
+      <div class="lightning-bolt">
+        <svg viewBox="0 0 40 80" fill="none">
+          <polygon
+            points="22,0 8,35 18,35 10,80 35,30 24,30 32,0"
+            fill="rgba(180,210,255,0.4)"
+          />
+        </svg>
+      </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         ROLE SELECTION CARD
+    ==================================================== -->
+
+    <div class="login-card role-select-card">
+
+      <!-- HEADER -->
+
+      <div class="login-header">
+
+        <img
+          src="/images/logo-feit-header.png"
+          alt="УКИМ — ФЕИТ"
+          class="login-logo-wide"
+        >
+
+        <div class="login-divider"></div>
+
+        <div class="role-select-header">
+          <h2>Избор на улога</h2>
+        </div>
+
+      </div>
+
+
+      <!-- DESCRIPTION -->
+
+      <p class="role-select-description">
+        Вашиот кориснички профил има повеќе доделени улоги.
+        Изберете ја улогата со која сакате да продолжите.
+      </p>
+
+
+      <!-- ERROR -->
+
+      <% if (typeof error !== 'undefined' && error && error.length > 0) { %>
+
+        <div class="alert alert-error role-error">
+          <%= Array.isArray(error) ? error[0] : error %>
+        </div>
+
+      <% } %>
+
+
+      <!-- USER INFO -->
+
+      <div class="role-user-info">
+        Најавени сте како
+        <strong><%= user.email %></strong>
+      </div>
+
+
+      <!-- =================================================
+           ROLE OPTIONS
+      ================================================== -->
+
+      <div class="role-list">
+
+        <% user.roles.forEach(function(roleItem) { %>
+
+          <% if (roleItem.role !== 'student') { %>
+
+            <form
+              method="POST"
+              action="/select-role"
+              class="role-form"
+            >
+
+              <input
+                type="hidden"
+                name="role"
+                value="<%= roleItem.role %>"
+              >
+
+              <button
+                type="submit"
+                class="role-button"
+              >
+
+                <span class="role-name">
+                  <%= roleItem.roleLabel %>
+                </span>
+
+              </button>
+
+            </form>
+
+          <% } %>
+
+        <% }); %>
+
+      </div>
+
+
+      <!-- =================================================
+           LOGOUT
+      ================================================== -->
+
+      <div class="role-logout-wrapper">
+
+        <a
+          href="/logout"
+          class="role-logout"
+        >
+          Одјава од системот
+        </a>
+
+      </div>
+
+
+      <!-- =================================================
+           FOOTER
+      ================================================== -->
+
+      <div class="login-footer">
+
+        <a href="https://feit.ukim.edu.mk">
+          feit.ukim.edu.mk
+        </a>
+
+        <span class="login-footer-sep">
+          |
+        </span>
+
+        <a href="https://www.iknow.ukim.mk">
+          iknow.ukim.mk
+        </a>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
