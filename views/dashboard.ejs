@@ -47,6 +47,10 @@
      <% if (isGlobalAdmin) { %>
   <div class="admin-action-card" style="margin-bottom: 1.5rem; max-width: 100%;">
     <h3>Додели улога</h3>
+    <p style="margin: 0.35rem 0 1rem; color: #64748b; font-size: 14px;">
+      Доколку корисникот веќе има друга улога, новата ќе биде додадена како дополнителна.
+      Постоечките улоги нема да бидат заменети.
+    </p>
 
     <form action="/dashboard/assign-role" method="POST">
       <div class="form-row">
