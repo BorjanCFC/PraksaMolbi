@@ -368,3 +368,9 @@ const sendMolbaRejectedEmail = async (
     `
   });
 };
+
+module.exports = {
+  sendMolbaCreatedEmail,
+  sendMolbaApprovedEmail,
+  sendMolbaRejectedEmail
+};
