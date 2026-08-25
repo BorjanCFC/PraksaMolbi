@@ -795,8 +795,7 @@ exports.getMolbaDetail = async (req, res) => {
       canManage: canManageMolbi(user.role),
       canArchiveNumber: user.role === ROLE.ARHIVA,
       canGenerateMolbaPdf: user.role === ROLE.STUDENTSKA_SLUZHBA
-        && (molba.status === 'Одобрена' || molba.status === 'Одбиена')
-        && !molba.arhivaPdfPath,
+        && (molba.status === 'Одобрена' || molba.status === 'Одбиена'),
       molba,
       success: req.flash('success'),
       error: req.flash('error')
@@ -890,9 +889,17 @@ exports.generateMolbaPdf = async (req, res) => {
       return res.redirect(`/dashboard/molba/${req.params.id}`);
     }
 
+    // Delete old PDF if it exists (to allow regeneration)
     if (molba.arhivaPdfPath) {
-      req.flash('error', 'PDF за оваа молба е веќе генериран.');
-      return res.redirect(`/dashboard/molba/${req.params.id}`);
+      const oldPdfPath = resolveUploadPath(molba.arhivaPdfPath);
+      try {
+        if (fs.existsSync(oldPdfPath)) {
+          fs.unlinkSync(oldPdfPath);
+          console.log('[Controller] Old PDF deleted:', oldPdfPath);
+        }
+      } catch (unlinkError) {
+        console.warn('[Controller] Error deleting old PDF:', unlinkError.message);
+      }
     }
 
     if (molba.student) {
@@ -1082,6 +1089,7 @@ exports.downloadStudentDocument = async (req, res) => {
     return res.redirect('/dashboard');
   }
 };
+
 
 
 

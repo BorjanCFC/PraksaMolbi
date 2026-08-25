@@ -2,16 +2,36 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const { convertNameToCyrillic } = require('./cyrillicConverter');
 
-const SMTP_HOST = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+const SMTP_HOST = (process.env.SMTP_HOST || 'smail.feit.ukim.edu.mk').trim();
 const SMTP_PORT = parseInt((process.env.SMTP_PORT || '587').trim(), 10);
+const SMTP_SECURE = String(process.env.SMTP_SECURE || 'false') === 'true';
+const SMTP_REQUIRE_TLS = String(process.env.SMTP_REQUIRE_TLS || 'true') === 'true';
+
 const SMTP_USER = (process.env.SMTP_USER || '').trim();
-const SMTP_PASSWORD = (process.env.SMTP_PASSWORD || '').replace(/\s/g, '');
+
+// Не бриши spaces автоматски, затоа што ова веќе не е Gmail app password.
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD || '';
+
 const SMTP_FROM_NAME = (process.env.SMTP_FROM_NAME || 'Студентска служба ФЕИТ').trim();
 const SMTP_FROM_EMAIL = (process.env.SMTP_FROM_EMAIL || SMTP_USER).trim();
+
+const SMTP_TLS_REJECT_UNAUTHORIZED =
+  String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || 'true') === 'true';
+
+const SMTP_TLS_CIPHERS =
+  process.env.SMTP_TLS_CIPHERS || 'DEFAULT:@SECLEVEL=1';
+
+const SMTP_SERVERNAME =
+  process.env.SMTP_SERVERNAME || SMTP_HOST;
+
+const SMTP_DEBUG =
+  String(process.env.SMTP_DEBUG || 'false') === 'true';
 
 console.log('[EmailService] Initializing with SMTP config:', {
   host: SMTP_HOST,
   port: SMTP_PORT,
+  secure: SMTP_SECURE,
+  requireTLS: SMTP_REQUIRE_TLS,
   user: SMTP_USER,
   from: SMTP_FROM_EMAIL
 });
@@ -23,20 +43,28 @@ if (!SMTP_USER || !SMTP_PASSWORD) {
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: SMTP_PORT,
-  secure: SMTP_PORT === 465,
+  secure: SMTP_SECURE,
+
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASSWORD
   },
 
-  // Gmail sometimes needs more than 5-8 seconds
+  requireTLS: SMTP_REQUIRE_TLS,
+
+  tls: {
+    servername: SMTP_SERVERNAME,
+    rejectUnauthorized: SMTP_TLS_REJECT_UNAUTHORIZED,
+    ciphers: SMTP_TLS_CIPHERS,
+    minVersion: 'TLSv1.2'
+  },
+
   connectionTimeout: 30000,
   greetingTimeout: 30000,
   socketTimeout: 30000,
 
-  // Helps with debugging
-  logger: true,
-  debug: true
+  logger: SMTP_DEBUG,
+  debug: SMTP_DEBUG
 });
 
 transporter.verify()
