@@ -73,6 +73,37 @@ const Molba = sequelize.define('Molba', {
       notEmpty: true
     }
   },
+
+  workflowStage: {
+    type: DataTypes.STRING(30),
+    allowNull: false,
+    defaultValue: 'SUBMITTED',
+    field: 'workflow_stage',
+    validate: {
+      isIn: [[
+        'SUBMITTED',
+        'ARCHIVED',
+        'SERVICE_REVIEWED',
+        'DECIDED',
+        'COMPLETED'
+      ]]
+    }
+  },
+
+  sluzhbaFeedback: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: null,
+    field: 'sluzhba_feedback'
+  },
+
+  prodekanFeedback: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: null,
+    field: 'prodekan_feedback'
+  },
+
   feedback: {
     type: DataTypes.TEXT,
     allowNull: true,

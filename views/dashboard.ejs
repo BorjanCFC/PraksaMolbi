@@ -30,67 +30,74 @@
           <div class="stat-number"><%= stats.vkupno %></div>
           <div class="stat-label">Вкупно молби</div>
         </div>
+
         <div class="stat-card stat-proces">
           <div class="stat-number"><%= stats.voProces %></div>
           <div class="stat-label">Во процес</div>
         </div>
+
         <div class="stat-card stat-odobrena">
           <div class="stat-number"><%= stats.odobreni %></div>
           <div class="stat-label">Одобрени</div>
         </div>
+
         <div class="stat-card stat-odbiena">
           <div class="stat-number"><%= stats.odbieni %></div>
           <div class="stat-label">Одбиени</div>
         </div>
       </div>
 
-     <% if (isGlobalAdmin) { %>
-  <div class="admin-action-card" style="margin-bottom: 1.5rem; max-width: 100%;">
-    <h3>Додели улога</h3>
-    <p style="margin: 0.35rem 0 1rem; color: #64748b; font-size: 14px;">
-      Доколку корисникот веќе има друга улога, новата ќе биде додадена како дополнителна.
-      Постоечките улоги нема да бидат заменети.
-    </p>
+      <% if (isGlobalAdmin) { %>
+        <div class="admin-action-card" style="margin-bottom: 1.5rem; max-width: 100%;">
+          <h3>Додели улога</h3>
 
-    <form action="/dashboard/assign-role" method="POST">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="assignEmail">Email</label>
-          <input
-            id="assignEmail"
-            name="email"
-            type="email"
-            placeholder="Внеси валидна email адреса"
-            required
-          >
+          <p style="margin: 0.35rem 0 1rem; color: #64748b; font-size: 14px;">
+            Доколку корисникот веќе има друга улога, новата ќе биде додадена како дополнителна.
+            Постоечките улоги нема да бидат заменети.
+          </p>
+
+          <form action="/dashboard/assign-role" method="POST">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="assignEmail">Email</label>
+                <input
+                  id="assignEmail"
+                  name="email"
+                  type="email"
+                  placeholder="Внеси валидна email адреса"
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="assignRole">Улога</label>
+                <select id="assignRole" name="role" class="form-select" required>
+                  <option value="admin">Админ</option>
+                  <option value="studentska_sluzhba">Студентска Служба</option>
+                  <option value="prodekan">Продекан</option>
+                  <option value="arhiva">Архива</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="assignAuthServer">Mail server</label>
+                <select id="assignAuthServer" name="authServer" class="form-select" required>
+                  <option value="smail">smail.feit.ukim.edu.mk</option>
+                  <option value="makedon">makedon.feit.ukim.edu.mk</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-admin">Зачувај улога</button>
+            </div>
+          </form>
         </div>
+      <% } %>
 
-        <div class="form-group">
-          <label for="assignRole">Улога</label>
-          <select id="assignRole" name="role" class="form-select" required>
-            <option value="admin">Админ</option>
-            <option value="studentska_sluzhba">Студентска Служба</option>
-            <option value="prodekan">Продекан</option>
-            <option value="arhiva">Архива</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="assignAuthServer">Mail server</label>
-          <select id="assignAuthServer" name="authServer" class="form-select" required>
-            <option value="smail">smail.feit.ukim.edu.mk</option>
-            <option value="makedon">makedon.feit.ukim.edu.mk</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn btn-admin">Зачувај улога</button>
-      </div>
-    </form>
-  </div>
-<% } %>
-
+      <!-- =================================================
+           STAFF FILTERS
+      ================================================== -->
       <div class="filter-bar">
         <div class="filter-group">
           <label for="statusFilter">Статус:</label>
@@ -101,6 +108,7 @@
             <option value="Одбиена" <%= currentStatus === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
           </select>
         </div>
+
         <div class="filter-group">
           <label for="semestarFilter">Семестар:</label>
           <select id="semestarFilter" class="form-select filter-select">
@@ -109,40 +117,128 @@
             <option value="Летен" <%= currentSemestar === 'Летен' ? 'selected' : '' %>>Летен</option>
           </select>
         </div>
+
+        <div class="filter-group">
+          <label for="academicYearFilter">Учебна година:</label>
+          <select id="academicYearFilter" class="form-select filter-select">
+            <option value="site" <%= currentAcademicYear === 'site' ? 'selected' : '' %>>Сите</option>
+
+            <% academicYearOptions.forEach((year) => { %>
+              <option
+                value="<%= year %>"
+                <%= currentAcademicYear === year ? 'selected' : '' %>
+              >
+                <%= year %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="studentIndexFilter">Бр. индекс:</label>
+          <input
+            id="studentIndexFilter"
+            class="form-select filter-select"
+            type="text"
+            value="<%= currentStudentIndex %>"
+            placeholder="Пр. 106/2022"
+            autocomplete="off"
+          >
+        </div>
+
         <div class="filter-group">
           <label for="fromDate">Од датум:</label>
-          <input id="fromDate" class="form-select filter-select" type="date" value="<%= currentFromDate %>">
+          <input
+            id="fromDate"
+            class="form-select filter-select"
+            type="date"
+            value="<%= currentFromDate %>"
+          >
         </div>
+
         <div class="filter-group">
           <label for="toDate">До датум:</label>
-          <input id="toDate" class="form-select filter-select" type="date" value="<%= currentToDate %>">
+          <input
+            id="toDate"
+            class="form-select filter-select"
+            type="date"
+            value="<%= currentToDate %>"
+          >
         </div>
-        <button type="button" class="btn btn-secondary btn-small" onclick="clearFilters()">Исчисти</button>
+
+        <button
+          type="button"
+          class="btn btn-primary btn-small"
+          onclick="applyFilters()"
+        >
+          Примени
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-secondary btn-small"
+          onclick="clearFilters()"
+        >
+          Исчисти
+        </button>
       </div>
 
       <script>
         document.getElementById('statusFilter').addEventListener('change', applyFilters);
         document.getElementById('semestarFilter').addEventListener('change', applyFilters);
+        document.getElementById('academicYearFilter').addEventListener('change', applyFilters);
         document.getElementById('fromDate').addEventListener('change', applyFilters);
         document.getElementById('toDate').addEventListener('change', applyFilters);
+
+        document.getElementById('studentIndexFilter').addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            applyFilters();
+          }
+        });
 
         function applyFilters() {
           const status = document.getElementById('statusFilter').value;
           const semestar = document.getElementById('semestarFilter').value;
+          const ucebnaGodina = document.getElementById('academicYearFilter').value;
+          const studentIndex = document.getElementById('studentIndexFilter').value.trim();
           const fromDate = document.getElementById('fromDate').value;
           const toDate = document.getElementById('toDate').value;
-          window.location.href = '/dashboard?status=' + encodeURIComponent(status) + '&semestar=' + encodeURIComponent(semestar) + '&fromDate=' + encodeURIComponent(fromDate) + '&toDate=' + encodeURIComponent(toDate);
+
+          const params = new URLSearchParams();
+
+          params.set('status', status);
+          params.set('semestar', semestar);
+          params.set('ucebnaGodina', ucebnaGodina);
+          params.set('studentIndex', studentIndex);
+          params.set('fromDate', fromDate);
+          params.set('toDate', toDate);
+
+          window.location.href = '/dashboard?' + params.toString();
         }
 
         function clearFilters() {
-          window.location.href = '/dashboard?status=site&semestar=site&fromDate=&toDate=';
+          window.location.href =
+            '/dashboard?status=site&semestar=site&ucebnaGodina=site&studentIndex=&fromDate=&toDate=';
         }
       </script>
 
-      <% if (molbi.length === 0) { %>
+      <!-- =================================================
+           ACTIVE REQUESTS
+      ================================================== -->
+      <div class="dashboard-header" style="margin-top: 1.5rem;">
+        <div>
+          <h2 style="font-size: 1.55rem;">Активни молби</h2>
+          <p style="margin: 0.25rem 0 0; color: #64748b;">
+            Молби кои моментално бараат акција од Вашата улога.
+          </p>
+        </div>
+      </div>
+
+      <% if (activeMolbi.length === 0) { %>
         <div class="empty-state">
-          <h3>Нема молби за избраните филтри</h3>
-          <p>Променете филтер или почекајте нови поднесувања.</p>
+          <h3>Нема активни молби за избраните филтри</h3>
+          <p>Променете ги филтрите или проверете ги завршените молби подолу.</p>
         </div>
       <% } else { %>
         <div class="table-wrapper">
@@ -152,6 +248,7 @@
                 <th>#</th>
                 <th>Студент</th>
                 <th>Бр. индекс</th>
+                <th>Архивски број</th>
                 <th>Наслов</th>
                 <th>Семестар / учебна година</th>
                 <th>Датум</th>
@@ -159,22 +256,157 @@
                 <th>Акции</th>
               </tr>
             </thead>
+
             <tbody>
-              <% molbi.forEach((molba) => { %>
+              <% activeMolbi.forEach((molba) => { %>
                 <tr>
                   <td><%= molba.molbaId %></td>
-                  <td><%= convertNameToCyrillic(molba.student.ime) %> <%= convertNameToCyrillic(molba.student.prezime) %></td>
-                  <td><%= molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null) || '-' %></td>
-                  <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 70) %><%= (molba.naslov || '').length > 70 ? '...' : '' %></td>
-                  <td><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></td>
-                  <td><% const adminDate = new Date(molba.datum); const adminDay = String(adminDate.getDate()).padStart(2, '0'); const adminMonth = String(adminDate.getMonth() + 1).padStart(2, '0'); const adminYear = adminDate.getFullYear(); %><%= adminDay %>.<%= adminMonth %>.<%= adminYear %></td>
+
+                  <td>
+                    <%= convertNameToCyrillic(molba.student.ime) %>
+                    <%= convertNameToCyrillic(molba.student.prezime) %>
+                  </td>
+
+                  <td>
+                    <%= molba.student.brIndeks ||
+                        (molba.student.studentProfile
+                          ? molba.student.studentProfile.brIndeks
+                          : null) ||
+                        '-' %>
+                  </td>
+
+                  <td><%= molba.arhivskiBroj || '-' %></td>
+
+                  <td class="desc-cell">
+                    <%= (molba.naslov || 'Без наслов').substring(0, 70) %>
+                    <%= (molba.naslov || '').length > 70 ? '...' : '' %>
+                  </td>
+
+                  <td>
+                    <%= molba.semestar %> /
+                    <%= molba.ucebnaGodina || '-' %>
+                  </td>
+
+                  <td>
+                    <%
+                      const activeDate = new Date(molba.datum);
+                      const activeDay = String(activeDate.getDate()).padStart(2, '0');
+                      const activeMonth = String(activeDate.getMonth() + 1).padStart(2, '0');
+                      const activeYear = activeDate.getFullYear();
+                    %>
+                    <%= activeDay %>.<%= activeMonth %>.<%= activeYear %>
+                  </td>
+
                   <td>
                     <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
                       <%= molba.status %>
                     </span>
                   </td>
+
                   <td>
-                    <a href="/dashboard/molba/<%= molba.molbaId %>" class="btn btn-small">Детали</a>
+                    <a
+                      href="/dashboard/molba/<%= molba.molbaId %>"
+                      class="btn btn-small"
+                    >
+                      Детали
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+
+      <!-- =================================================
+           COMPLETED REQUESTS
+      ================================================== -->
+      <div class="dashboard-header" style="margin-top: 2rem;">
+        <div>
+          <h2 style="font-size: 1.55rem;">Завршени молби</h2>
+          <p style="margin: 0.25rem 0 0; color: #64748b;">
+            Молби за кои обработката на Вашата улога е завршена.
+          </p>
+        </div>
+      </div>
+
+      <% if (completedMolbi.length === 0) { %>
+        <div class="empty-state">
+          <h3>Нема завршени молби за избраните филтри</h3>
+          <p>Завршените молби ќе бидат прикажани овде.</p>
+        </div>
+      <% } else { %>
+        <div class="table-wrapper">
+          <table class="molbi-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Студент</th>
+                <th>Бр. индекс</th>
+                <th>Архивски број</th>
+                <th>Наслов</th>
+                <th>Семестар / учебна година</th>
+                <th>Датум</th>
+                <th>Статус</th>
+                <th>Акции</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <% completedMolbi.forEach((molba) => { %>
+                <tr>
+                  <td><%= molba.molbaId %></td>
+
+                  <td>
+                    <%= convertNameToCyrillic(molba.student.ime) %>
+                    <%= convertNameToCyrillic(molba.student.prezime) %>
+                  </td>
+
+                  <td>
+                    <%= molba.student.brIndeks ||
+                        (molba.student.studentProfile
+                          ? molba.student.studentProfile.brIndeks
+                          : null) ||
+                        '-' %>
+                  </td>
+
+                  <td><%= molba.arhivskiBroj || '-' %></td>
+
+                  <td class="desc-cell">
+                    <%= (molba.naslov || 'Без наслов').substring(0, 70) %>
+                    <%= (molba.naslov || '').length > 70 ? '...' : '' %>
+                  </td>
+
+                  <td>
+                    <%= molba.semestar %> /
+                    <%= molba.ucebnaGodina || '-' %>
+                  </td>
+
+                  <td>
+                    <%
+                      const completedDate = new Date(molba.datum);
+                      const completedDay = String(completedDate.getDate()).padStart(2, '0');
+                      const completedMonth = String(completedDate.getMonth() + 1).padStart(2, '0');
+                      const completedYear = completedDate.getFullYear();
+                    %>
+                    <%= completedDay %>.<%= completedMonth %>.<%= completedYear %>
+                  </td>
+
+                  <td>
+                    <span
+                      class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>"
+                    >
+                      <%= molba.status %>
+                    </span>
+                  </td>
+
+                  <td>
+                    <a
+                      href="/dashboard/molba/<%= molba.molbaId %>"
+                      class="btn btn-small"
+                    >
+                      Детали
+                    </a>
                   </td>
                 </tr>
               <% }) %>
@@ -258,15 +490,30 @@
         }
       </script>
 
-      <% if (molbi.length === 0) { %>
-        <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
-          <h3>Немате испратено молби</h3>
-          <p>Кликнете на „Нова молба“ за да испратите барање.</p>
+      <!-- =====================================================
+           АКТИВНИ МОЛБИ
+      ====================================================== -->
+
+      <div class="dashboard-header" style="margin-top: 2rem;">
+        <div>
+          <h2>Активни молби</h2>
         </div>
+      </div>
+
+      <% if (activeMolbi.length === 0) { %>
+
+        <div class="empty-state">
+          <h3>Немате активни молби</h3>
+          <p>
+            Во моментот немате молби што се во процес на обработка.
+          </p>
+        </div>
+
       <% } else { %>
+
         <div class="table-wrapper">
           <table class="molbi-table">
+
             <thead>
               <tr>
                 <th>#</th>
@@ -274,30 +521,154 @@
                 <th>Семестар / учебна година</th>
                 <th>Датум</th>
                 <th>Статус</th>
-                <th></th>
+                <th>Акции</th>
               </tr>
             </thead>
+
             <tbody>
-              <% molbi.forEach((molba, index) => { %>
+
+              <% activeMolbi.forEach((molba) => { %>
+
                 <tr>
-                  <td><%= index + 1 %></td>
-                  <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 80) %><%= (molba.naslov || '').length > 80 ? '...' : '' %></td>
-                  <td><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></td>
-                  <td><%= molba.datum %></td>
+
+                  <td>
+                    <%= molba.molbaId %>
+                  </td>
+
+                  <td class="desc-cell">
+                    <%= (molba.naslov || 'Без наслов').substring(0, 80) %>
+                    <%= (molba.naslov || '').length > 80 ? '...' : '' %>
+                  </td>
+
+                  <td>
+                    <%= molba.semestar %>
+                    /
+                    <%= molba.ucebnaGodina || '-' %>
+                  </td>
+
+                  <td>
+                    <%= molba.datum %>
+                  </td>
+
                   <td>
                     <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
                       <%= molba.status %>
                     </span>
                   </td>
+
                   <td>
-                    <a href="/dashboard/molba/<%= molba.molbaId %>" class="btn btn-small">Детали</a>
+                    <a
+                      href="/dashboard/molba/<%= molba.molbaId %>"
+                      class="btn btn-small"
+                    >
+                      Детали
+                    </a>
                   </td>
+
                 </tr>
+
               <% }) %>
+
             </tbody>
+
           </table>
         </div>
+
       <% } %>
+
+
+      <!-- =====================================================
+           ЗАВРШЕНИ МОЛБИ
+      ====================================================== -->
+
+      <div class="dashboard-header" style="margin-top: 2.5rem;">
+        <div>
+          <h2>Завршени молби</h2>
+        </div>
+      </div>
+
+      <% if (completedMolbi.length === 0) { %>
+
+        <div class="empty-state">
+          <h3>Немате завршени молби</h3>
+          <p>
+            Одобрените и одбиените молби ќе се прикажуваат тука.
+          </p>
+        </div>
+
+      <% } else { %>
+
+        <div class="table-wrapper">
+          <table class="molbi-table">
+
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Наслов</th>
+                <th>Семестар / учебна година</th>
+                <th>Датум</th>
+                <th>Статус</th>
+                <th>Акции</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <% completedMolbi.forEach((molba) => { %>
+
+                <tr>
+
+                  <td>
+                    <%= molba.molbaId %>
+                  </td>
+
+                  <td class="desc-cell">
+                    <%= (molba.naslov || 'Без наслов').substring(0, 80) %>
+                    <%= (molba.naslov || '').length > 80 ? '...' : '' %>
+                  </td>
+
+                  <td>
+                    <%= molba.semestar %>
+                    /
+                    <%= molba.ucebnaGodina || '-' %>
+                  </td>
+
+                  <td>
+                    <%= molba.datum %>
+                  </td>
+
+                  <td>
+                    <span
+                      class="status-badge status-<%=
+                        molba.status === 'Одобрена'
+                          ? 'odobrena'
+                          : 'odbiena'
+                      %>"
+                    >
+                      <%= molba.status %>
+                    </span>
+                  </td>
+
+                  <td>
+                    <a
+                      href="/dashboard/molba/<%= molba.molbaId %>"
+                      class="btn btn-small"
+                    >
+                      Детали
+                    </a>
+                  </td>
+
+                </tr>
+
+              <% }) %>
+
+            </tbody>
+
+          </table>
+        </div>
+
+      <% } %>
+
     <% } %>
   </main>
 

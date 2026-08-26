@@ -11,6 +11,16 @@
   <%- include('partials/header', { viewer, isImpersonating }) %>
 
   <main class="container">
+  <!-- detail-dashboard-back-top -->
+  <div style="margin-bottom: 1rem;">
+    <a
+      href="/dashboard"
+      class="btn btn-secondary"
+    >
+      ← Назад кон dashboard
+    </a>
+  </div>
+
     <% if (success && success.length > 0) { %>
       <div class="alert alert-success"><%= success %></div>
     <% } %>
@@ -90,6 +100,217 @@
             <a href="/dashboard/molba/<%= molba.molbaId %>/document/archive" class="btn btn-small">Преглед/симни генериран PDF</a>
           <% } %>
         </div>
+
+  <!-- WORKFLOW_V2_COMPACT -->
+
+  <% if (
+       showInternalFeedback &&
+       (
+         molba.sluzhbaFeedback ||
+         molba.prodekanFeedback
+       )
+     ) { %>
+
+    <div
+      class="workflow-inline-section workflow-feedback-section"
+    >
+
+      <% if (molba.sluzhbaFeedback) { %>
+
+        <div class="workflow-feedback-item">
+
+          <div class="workflow-feedback-label">
+            Забелешка од Студентска служба до Продекан
+          </div>
+
+          <div class="workflow-feedback-text"><%= String(molba.sluzhbaFeedback || '').trim() %></div>
+
+        </div>
+
+      <% } %>
+
+
+      <% if (molba.prodekanFeedback) { %>
+
+        <div class="workflow-feedback-item">
+
+          <div class="workflow-feedback-label">
+            Забелешка од Продекан до Студентска служба
+          </div>
+
+          <div class="workflow-feedback-text"><%= String(molba.prodekanFeedback || '').trim() %></div>
+
+        </div>
+
+      <% } %>
+
+    </div>
+
+  <% } %>
+
+
+  <!-- ===================================================
+       STUDENTSKA SLUZHBA
+  ==================================================== -->
+
+  <% if (canServiceReview) { %>
+
+    <div class="workflow-inline-section">
+
+      <h3 class="workflow-inline-title">
+        Забелешка за Продекан
+      </h3>
+
+      <form
+        action="/dashboard/molba/<%= molba.molbaId %>/service-review"
+        method="POST"
+      >
+
+        <div class="form-group">
+
+          <textarea
+            id="sluzhbaFeedback"
+            name="sluzhbaFeedback"
+            rows="5"
+          ><%= molba.sluzhbaFeedback || '' %></textarea>
+
+        </div>
+
+
+        <div class="form-actions workflow-inline-actions">
+
+          <a
+            href="/dashboard"
+            class="btn btn-secondary"
+          >
+            ← Назад
+          </a>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Потврди проверка и испрати до Продекан
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  <% } %>
+
+
+  <!-- ===================================================
+       PRODEKAN
+  ==================================================== -->
+
+  <% if (canProdekanDecide) { %>
+
+    <div class="workflow-inline-section">
+
+      <h3 class="workflow-inline-title">
+        Одлука на Продекан
+      </h3>
+
+
+      <form
+        action="/dashboard/molba/<%= molba.molbaId %>/status"
+        method="POST"
+      >
+
+        <div class="form-group">
+
+          <label for="status">
+            Нов статус
+          </label>
+
+          <select
+            id="status"
+            name="status"
+            class="form-select"
+            required
+          >
+
+            <option value="">
+              Изберете одлука
+            </option>
+
+            <option
+              value="Одобрена"
+            >
+              Одобрена
+            </option>
+
+            <option
+              value="Одбиена"
+            >
+              Одбиена
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="feedback">
+            Повратна информација до студентот
+          </label>
+
+          <textarea
+            id="feedback"
+            name="feedback"
+            rows="5"
+          ><%= molba.feedback || '' %></textarea>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="prodekanFeedback">
+            Забелешка до служба
+          </label>
+
+          <textarea
+            id="prodekanFeedback"
+            name="prodekanFeedback"
+            rows="5"
+          ><%= molba.prodekanFeedback || '' %></textarea>
+
+        </div>
+
+
+        <div class="form-actions workflow-inline-actions">
+
+          <a
+            href="/dashboard"
+            class="btn btn-secondary"
+          >
+            ← Назад
+          </a>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Зачувај одлука
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  <% } %>
+
+  <!-- /WORKFLOW_V2_COMPACT -->
+
+
       </div>
 
       <% if (canArchiveNumber) { %>
@@ -102,7 +323,7 @@
             <form action="/dashboard/molba/<%= molba.molbaId %>/archive-number" method="POST">
               <div class="form-group">
                 <label for="arhivskiBroj">Архивски број</label>
-                <input id="arhivskiBroj" name="arhivskiBroj" type="text" maxlength="100" placeholder="Пр. ARH-2026-001" required>
+                <input id="arhivskiBroj" name="arhivskiBroj" type="text" maxlength="100" required>
               </div>
               <div class="form-actions">
                 <button type="submit" class="btn btn-admin">Зачувај архивски број</button>
@@ -162,6 +383,18 @@
         </div>
       <% } %>
     </div>
+  
+  <!-- detail-dashboard-back-bottom -->
+  <div style="margin-top: 2rem; margin-bottom: 1rem;">
+    <a
+      href="/dashboard"
+      class="btn btn-secondary"
+    >
+      ← Назад кон dashboard
+    </a>
+  </div>
+
+
   </main>
 
   <%- include('partials/footer') %>

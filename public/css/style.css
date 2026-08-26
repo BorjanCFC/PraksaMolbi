@@ -1323,3 +1323,155 @@ nav {
 ::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }
 
 ::selection { background: var(--accent); color: white; }
+
+/* WORKFLOW_STATUS_COLOR_FIX_START */
+
+/*
+ * Во процес = жолто/портокалово
+ */
+.status-badge.status-proces {
+  background-color: #fff0d5 !important;
+  color: #ea580c !important;
+  border: 1px solid #fdba74 !important;
+}
+
+
+/*
+ * Одобрена = зелено
+ */
+.status-badge.status-odobrena {
+  background-color: #dcfce7 !important;
+  color: #15803d !important;
+  border: 1px solid #86efac !important;
+}
+
+
+/*
+ * Одбиена = црвено
+ */
+.status-badge.status-odbiena {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+  border: 1px solid #fca5a5 !important;
+}
+
+
+/*
+ * Workflow actions се дел од главниот detail card,
+ * а не посебни големи блокови под него.
+ */
+.workflow-inline-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dbe4ee;
+}
+
+
+.workflow-inline-title {
+  margin: 0 0 1rem;
+  color: #0b4a82;
+  font-size: 1.25rem;
+}
+
+
+.workflow-inline-section textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+}
+
+
+.workflow-inline-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+
+.workflow-feedback-section {
+  display: grid;
+  gap: 0.9rem;
+}
+
+
+.workflow-feedback-item {
+  padding: 0.9rem 1rem;
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+
+.workflow-feedback-label {
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+  color: #0b4a82;
+}
+
+
+.workflow-feedback-text {
+  color: #334155;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* WORKFLOW_STATUS_COLOR_FIX_END */
+
+/* INTERNAL_FEEDBACK_LAYOUT_FIX_START */
+
+.workflow-feedback-section {
+  display: grid;
+  gap: 1rem;
+}
+
+
+.workflow-feedback-item {
+  display: block;
+  margin: 0;
+  padding: 1rem 1.1rem;
+  text-align: left;
+  text-indent: 0;
+}
+
+
+.workflow-feedback-label {
+  display: block;
+  margin: 0 0 0.55rem 0;
+  padding: 0;
+  font-weight: 700;
+  text-align: left;
+  text-indent: 0;
+}
+
+
+.workflow-feedback-text {
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  /*
+   * pre-line gi zadrzhuva novite redovi
+   * vneseni od korisnikot,
+   * no ne gi prikazhuva EJS tabovite/spaces.
+   */
+  white-space: pre-line !important;
+
+  text-align: left !important;
+  text-indent: 0 !important;
+  line-height: 1.5;
+}
+
+
+/*
+ * Sigurnost ako browserot nasledil
+ * margin/padding od paragraph stilovi.
+ */
+.workflow-feedback-item p,
+.workflow-feedback-item div {
+  text-indent: 0;
+}
+
+/* INTERNAL_FEEDBACK_LAYOUT_FIX_END */
+
