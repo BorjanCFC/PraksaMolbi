@@ -50,6 +50,22 @@ const allowedSemestri = new Set([
   'Летен'
 ]);
 
+
+const FEIT_MAJOR_OPTIONS = [
+  'ЕАОИЕ',
+  'ЕЕПМ',
+  'ЕЕС',
+  'КСИАР',
+  'КТИ',
+  'КХИЕ',
+  'ТКИИ'
+];
+
+const FEIT_MAJOR_SET =
+  new Set(
+    FEIT_MAJOR_OPTIONS
+  );
+
 const academicYearPattern = /^\d{4}\/\d{4}$/;
 
 
@@ -576,8 +592,18 @@ const generateArchivePdfFile = async (molba) => {
     specificArchiveDir
   );
 
+  const safeIme = String(molba.student.ime || '')
+  .trim()
+  .replace(/\s+/g, '')
+  .replace(/[^\p{L}\p{N}]/gu, '');
+
+  const safePrezime = String(molba.student.prezime || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '');
+
   const fileName =
-    `molba-${molba.molbaId}-${Date.now()}.pdf`;
+    `Molba-${molba.molbaId}-${safeIme}${safePrezime}.pdf`;
 
   const fullPath =
     path.join(
@@ -811,9 +837,9 @@ const generateArchivePdfFile = async (molba) => {
 
       doc
           .font(boldFont)
-          .fontSize(12)
+          .fontSize(14)
           .text(
-            'УНИВЕРЗИТЕТ “Св. КИРИЛ И МЕТОДИЈ” во СКОПЈЕ',
+            'Универзитет "Св. Кирил и Методиј" во Скопје',
             headerX,
             68,
             {
@@ -1526,17 +1552,21 @@ exports.getDashboard = async (
   req,
   res
 ) => {
+
   const user =
     requireAuth(
       req,
       res
     );
 
+
   if (!user) {
     return;
   }
 
+
   try {
+
     const {
       status,
       semestar,
@@ -1545,6 +1575,33 @@ exports.getDashboard = async (
       fromDate,
       toDate
     } = req.query;
+
+
+    const hasActiveFilters =
+      Boolean(
+        (
+          status &&
+          status !== 'site'
+        ) ||
+
+        (
+          semestar &&
+          semestar !== 'site'
+        ) ||
+
+        (
+          ucebnaGodina &&
+          ucebnaGodina !== 'site'
+        ) ||
+
+        String(
+          studentIndex || ''
+        ).trim() ||
+
+        fromDate ||
+
+        toDate
+      );
 
 
     /* =====================================================
@@ -1556,6 +1613,7 @@ exports.getDashboard = async (
         user.role
       )
     ) {
+
       const student =
         await User.findByPk(
           user.userId,
@@ -1577,11 +1635,13 @@ exports.getDashboard = async (
         student &&
         student.studentProfile
       ) {
+
         user.brIndeks =
           student
             .studentProfile
             .brIndeks ||
           null;
+
 
         user.smer =
           student
@@ -1594,10 +1654,12 @@ exports.getDashboard = async (
           req.session &&
           req.session.user
         ) {
+
           req.session
             .user
             .brIndeks =
             user.brIndeks;
+
 
           req.session
             .user
@@ -1607,7 +1669,7 @@ exports.getDashboard = async (
       }
 
 
-      const whereClause = {
+      const where = {
         userId:
           user.userId
       };
@@ -1620,7 +1682,7 @@ exports.getDashboard = async (
           status
         )
       ) {
-        whereClause.status =
+        where.status =
           status;
       }
 
@@ -1632,13 +1694,25 @@ exports.getDashboard = async (
           semestar
         )
       ) {
-        whereClause.semestar =
+        where.semestar =
           semestar;
       }
 
 
+      if (
+        ucebnaGodina &&
+        ucebnaGodina !== 'site' &&
+        academicYearPattern.test(
+          ucebnaGodina
+        )
+      ) {
+        where.ucebnaGodina =
+          ucebnaGodina;
+      }
+
+
       addDateFilter(
-        whereClause,
+        where,
         fromDate,
         toDate
       );
@@ -1646,8 +1720,19 @@ exports.getDashboard = async (
 
       const molbi =
         await Molba.findAll({
-          where:
-            whereClause,
+          where,
+
+          order:
+            newestFirstOrder
+        });
+
+
+      const siteMolbi =
+        await Molba.findAll({
+          where: {
+            userId:
+              user.userId
+          },
 
           order:
             newestFirstOrder
@@ -1655,10 +1740,9 @@ exports.getDashboard = async (
 
 
       /*
-       * So noviot workflow:
-       *
-       * za studentot molbata e aktivna se dodeka
-       * Sluzhbata ne go generira finalniot PDF.
+       * Kaj student:
+       * active = Vo proces
+       * completed = Odobrena / Odbiena
        */
       const activeMolbi =
         molbi.filter(
@@ -1679,13 +1763,23 @@ exports.getDashboard = async (
         );
 
 
-      const siteMolbi =
-        await Molba.findAll({
-          where: {
-            userId:
-              user.userId
-          }
-        });
+      const academicYearOptions =
+        [
+          ...new Set(
+            siteMolbi
+              .map(
+                (item) =>
+                  item.ucebnaGodina
+              )
+              .filter(
+                Boolean
+              )
+          )
+        ]
+          .sort(
+            (a, b) =>
+              b.localeCompare(a)
+          );
 
 
       return res.render(
@@ -1700,6 +1794,8 @@ exports.getDashboard = async (
           getRoleLabel,
 
           convertNameToCyrillic,
+
+          formatDateMk,
 
           isImpersonating:
             false,
@@ -1720,6 +1816,10 @@ exports.getDashboard = async (
 
           siteMolbi,
 
+          academicYearOptions,
+
+          hasActiveFilters,
+
           currentStatus:
             status ||
             'site',
@@ -1727,6 +1827,13 @@ exports.getDashboard = async (
           currentSemestar:
             semestar ||
             'site',
+
+          currentAcademicYear:
+            ucebnaGodina ||
+            'site',
+
+          currentStudentIndex:
+            '',
 
           currentFromDate:
             fromDate ||
@@ -1754,7 +1861,7 @@ exports.getDashboard = async (
        STAFF DASHBOARD
     ===================================================== */
 
-    const whereClause = {};
+    const where = {};
 
 
     if (
@@ -1764,7 +1871,7 @@ exports.getDashboard = async (
         status
       )
     ) {
-      whereClause.status =
+      where.status =
         status;
     }
 
@@ -1776,7 +1883,7 @@ exports.getDashboard = async (
         semestar
       )
     ) {
-      whereClause.semestar =
+      where.semestar =
         semestar;
     }
 
@@ -1788,27 +1895,24 @@ exports.getDashboard = async (
         ucebnaGodina
       )
     ) {
-      whereClause.ucebnaGodina =
+      where.ucebnaGodina =
         ucebnaGodina;
     }
 
 
     addDateFilter(
-      whereClause,
+      where,
       fromDate,
       toDate
     );
 
 
     /*
-     * Gi zemame molbite so student profile,
-     * potoa workflow pravilata kazhuvaat
-     * koja rola smee da vidi koja faza.
+     * Prvo se primenuvaat site standardni filtri.
      */
-    const queriedMolbi =
+    const queried =
       await Molba.findAll({
-        where:
-          whereClause,
+        where,
 
         include:
           molbaStudentInclude,
@@ -1819,12 +1923,114 @@ exports.getDashboard = async (
 
 
     prepareStudentData(
-      queriedMolbi
+      queried
     );
 
 
-    let visibleMolbi =
-      queriedMolbi.filter(
+    /*
+     * Potoa se primenuva workflow visibility.
+     */
+    let visible =
+      queried.filter(
+        (item) =>
+          isWorkflowVisibleToRole(
+            user.role,
+            item
+          )
+      );
+
+
+    /* =====================================================
+       TEXT INDEX FILTER
+    ===================================================== */
+
+    const searchIndex =
+      String(
+        studentIndex || ''
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '');
+
+
+    if (searchIndex) {
+
+      visible =
+        visible.filter(
+          (item) => {
+
+            /*
+             * Student indexot fizicki e vo Student profile.
+             * prepareStudentData moze da go postavi i na
+             * item.student, no ne zavisime samo od toa.
+             */
+            const profileIndex =
+              item &&
+              item.student &&
+              item.student.studentProfile
+                ? item.student
+                    .studentProfile
+                    .brIndeks
+                : null;
+
+
+            const preparedIndex =
+              item &&
+              item.student
+                ? (
+                    typeof item.student.get ===
+                    'function'
+                      ? item.student.get(
+                          'brIndeks'
+                        )
+                      : item.student.brIndeks
+                  )
+                : null;
+
+
+            const indexValue =
+              String(
+                profileIndex ||
+                preparedIndex ||
+                ''
+              )
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, '');
+
+
+            /*
+             * Text search:
+             *
+             * 106      -> 106/2022
+             * 2022     -> 106/2022
+             * 106/2022 -> 106/2022
+             */
+            return indexValue.includes(
+              searchIndex
+            );
+          }
+        );
+    }
+
+
+    const allRaw =
+      await Molba.findAll({
+        include:
+          molbaStudentInclude,
+
+        order:
+          newestFirstOrder
+      });
+
+
+    prepareStudentData(
+      allRaw
+    );
+
+
+    const allRole =
+      allRaw.filter(
         (item) =>
           isWorkflowVisibleToRole(
             user.role,
@@ -1834,74 +2040,11 @@ exports.getDashboard = async (
 
 
     /*
-     * Text search po indeks.
-     *
-     * Nema dropdown so site studenti.
+     * Site filtri se veke primeneti vrz visible,
+     * pa vazhat i za aktivni i za zavrsheni.
      */
-    const cleanStudentIndex =
-      String(
-        studentIndex ||
-        ''
-      )
-        .trim()
-        .toLowerCase();
-
-
-    if (cleanStudentIndex) {
-      visibleMolbi =
-        visibleMolbi.filter(
-          (item) => {
-            const indexValue =
-              item.student &&
-              item.student.brIndeks
-                ? String(
-                    item.student.brIndeks
-                  ).toLowerCase()
-                : '';
-
-            return indexValue.includes(
-              cleanStudentIndex
-            );
-          }
-        );
-    }
-
-
-    /* =====================================================
-       DATA FOR STATS / YEAR OPTIONS
-    ===================================================== */
-
-    const allRoleMolbiRaw =
-      await Molba.findAll({
-        include:
-          molbaStudentInclude,
-
-        order:
-          newestFirstOrder
-      });
-
-
-    prepareStudentData(
-      allRoleMolbiRaw
-    );
-
-
-    const allRoleMolbi =
-      allRoleMolbiRaw.filter(
-        (item) =>
-          isWorkflowVisibleToRole(
-            user.role,
-            item
-          )
-      );
-
-
-    /* =====================================================
-       ACTIVE / COMPLETED
-    ===================================================== */
-
     const activeMolbi =
-      visibleMolbi.filter(
+      visible.filter(
         (item) =>
           !isWorkflowCompletedForRole(
             user.role,
@@ -1911,7 +2054,7 @@ exports.getDashboard = async (
 
 
     const completedMolbi =
-      visibleMolbi.filter(
+      visible.filter(
         (item) =>
           isWorkflowCompletedForRole(
             user.role,
@@ -1920,24 +2063,23 @@ exports.getDashboard = async (
       );
 
 
-    /* =====================================================
-       YEARS
-    ===================================================== */
-
     const academicYearOptions =
       [
         ...new Set(
-          allRoleMolbi
+          allRole
             .map(
               (item) =>
                 item.ucebnaGodina
             )
-            .filter(Boolean)
+            .filter(
+              Boolean
+            )
         )
-      ].sort(
-        (a, b) =>
-          b.localeCompare(a)
-      );
+      ]
+        .sort(
+          (a, b) =>
+            b.localeCompare(a)
+        );
 
 
     return res.render(
@@ -1953,6 +2095,8 @@ exports.getDashboard = async (
 
         convertNameToCyrillic,
 
+        formatDateMk,
+
         isImpersonating:
           false,
 
@@ -1967,32 +2111,35 @@ exports.getDashboard = async (
           false,
 
         molbi:
-          visibleMolbi,
+          visible,
 
         activeMolbi,
 
         completedMolbi,
 
+        hasActiveFilters,
+
         stats: {
+
           vkupno:
-            allRoleMolbi.length,
+            allRole.length,
 
           voProces:
-            allRoleMolbi.filter(
+            allRole.filter(
               (item) =>
                 item.status ===
                 'Во процес'
             ).length,
 
           odobreni:
-            allRoleMolbi.filter(
+            allRole.filter(
               (item) =>
                 item.status ===
                 'Одобрена'
             ).length,
 
           odbieni:
-            allRoleMolbi.filter(
+            allRole.filter(
               (item) =>
                 item.status ===
                 'Одбиена'
@@ -2040,15 +2187,18 @@ exports.getDashboard = async (
     );
 
   } catch (error) {
+
     console.error(
       'Dashboard error:',
       error
     );
 
+
     req.flash(
       'error',
       'Настана грешка при вчитување.'
     );
+
 
     return res.redirect(
       '/login'
@@ -2590,45 +2740,81 @@ exports.confirmServiceReview =
 ========================================================= */
 
 exports.getNovaMolba =
-  (
+  async (
     req,
     res
   ) => {
+
     const user =
       requireStudent(
         req,
         res
       );
 
+
     if (!user) {
       return;
     }
 
 
-    res.render(
-      'nova-molba',
-      {
-        title:
-          'Нова молба',
+    try {
 
-        viewer:
-          user,
+      const studentProfile =
+        await Student.findOne({
+          where: {
+            userId:
+              user.userId
+          }
+        });
 
-        getRoleLabel,
 
-        convertNameToCyrillic,
+      return res.render(
+        'nova-molba',
+        {
+          title:
+            'Нова молба',
 
-        isImpersonating:
-          false,
+          viewer:
+            user,
 
-        error:
-          req.flash(
-            'error'
-          )
-      }
-    );
+          getRoleLabel,
+
+          convertNameToCyrillic,
+
+          isImpersonating:
+            false,
+
+          studentProfile,
+
+          majorOptions:
+            FEIT_MAJOR_OPTIONS,
+
+          error:
+            req.flash(
+              'error'
+            )
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        'Load nova molba error:',
+        error
+      );
+
+
+      req.flash(
+        'error',
+        'Настана грешка при вчитување на формата.'
+      );
+
+
+      return res.redirect(
+        '/dashboard'
+      );
+    }
   };
-
 
 /* =========================================================
    POST /dashboard/nova-molba
@@ -2750,10 +2936,7 @@ exports.postNovaMolba =
       }
 
 
-      if (
-        !smer ||
-        smer.trim() === ''
-      ) {
+      if (!smer || !FEIT_MAJOR_SET.has(String(smer).trim())) {
         req.flash(
           'error',
           'Насоката е задолжителна.'
@@ -3054,14 +3237,7 @@ exports.getMolbaDetail =
         );
 
 
-      const canArchiveNumber =
-        user.role ===
-          ROLE.ARHIVA &&
-
-        stage ===
-          WORKFLOW_STAGE.SUBMITTED &&
-
-        !molba.arhivskiBroj;
+      const canArchiveNumber = user.role === ROLE.ARHIVA;
 
 
       const canServiceReview =
@@ -3118,6 +3294,7 @@ exports.getMolbaDetail =
           getRoleLabel,
 
           convertNameToCyrillic,
+          formatDateMk,
 
           isImpersonating:
             false,
@@ -3752,11 +3929,13 @@ exports.updateArchiveNumber =
     req,
     res
   ) => {
+
     const user =
       requireStaff(
         req,
         res
       );
+
 
     if (!user) {
       return;
@@ -3767,10 +3946,12 @@ exports.updateArchiveNumber =
       user.role !==
       ROLE.ARHIVA
     ) {
+
       req.flash(
         'error',
-        'Само Архива може да внесе архивски број.'
+        'Само Архива може да внесе или измени архивски број.'
       );
+
 
       return res.redirect(
         '/dashboard'
@@ -3779,18 +3960,21 @@ exports.updateArchiveNumber =
 
 
     try {
-      const cleanArchiveNumber =
+
+      const arhivskiBroj =
         String(
           req.body.arhivskiBroj ||
           ''
         ).trim();
 
 
-      if (!cleanArchiveNumber) {
+      if (!arhivskiBroj) {
+
         req.flash(
           'error',
           'Архивскиот број е задолжителен.'
         );
+
 
         return res.redirect(
           `/dashboard/molba/${req.params.id}`
@@ -3805,62 +3989,49 @@ exports.updateArchiveNumber =
 
 
       if (!molba) {
+
         req.flash(
           'error',
           'Молбата не е пронајдена.'
         );
 
+
         return res.redirect(
           '/dashboard'
         );
       }
 
 
-      const stage =
+      const currentStage =
         getResolvedWorkflowStage(
           molba
         );
 
 
-      if (
-        stage !==
-        WORKFLOW_STAGE.SUBMITTED
-      ) {
-        req.flash(
-          'error',
-          'Оваа молба веќе е обработена од Архива.'
-        );
-
-        return res.redirect(
-          '/dashboard'
-        );
-      }
-
-
-      if (
-        molba.arhivskiBroj
-      ) {
-        req.flash(
-          'error',
-          'Оваа молба веќе има архивски број.'
-        );
-
-        return res.redirect(
-          '/dashboard'
-        );
-      }
-
-
-      molba.arhivskiBroj =
-        cleanArchiveNumber;
+      const firstArchive =
+        currentStage ===
+        WORKFLOW_STAGE.SUBMITTED;
 
 
       /*
-       * Od ovoj moment molbata
-       * stanuva vidliva kaj Studentska sluzhba.
+       * Brojot sekogas moze da se promeni.
        */
-      molba.workflowStage =
-        WORKFLOW_STAGE.ARCHIVED;
+      molba.arhivskiBroj =
+        arhivskiBroj;
+
+
+      /*
+       * Samo prvoto arhiviranje ja menuva
+       * workflow fazata.
+       *
+       * Podocnezhna korekcija samo go menuva
+       * arhivskiot broj.
+       */
+      if (firstArchive) {
+
+        molba.workflowStage =
+          WORKFLOW_STAGE.ARCHIVED;
+      }
 
 
       await molba.save();
@@ -3868,24 +4039,34 @@ exports.updateArchiveNumber =
 
       req.flash(
         'success',
-        'Архивскиот број е успешно зачуван. Молбата е испратена до Студентската служба.'
+
+        firstArchive
+          ? 'Архивскиот број е успешно зачуван.'
+          : 'Архивскиот број е успешно изменет.'
       );
 
 
+      /*
+       * Po zacuvuvanje se vrakjame
+       * na listata so molbi.
+       */
       return res.redirect(
         '/dashboard'
       );
 
     } catch (error) {
+
       if (
         error &&
         error.name ===
-        'SequelizeUniqueConstraintError'
+          'SequelizeUniqueConstraintError'
       ) {
+
         req.flash(
           'error',
           'Архивскиот број мора да биде уникатен.'
         );
+
 
         return res.redirect(
           `/dashboard/molba/${req.params.id}`
@@ -3906,14 +4087,10 @@ exports.updateArchiveNumber =
 
 
       return res.redirect(
-        '/dashboard'
+        `/dashboard/molba/${req.params.id}`
       );
     }
   };
-
-/* =========================================================
-   GET /dashboard/molba/:id/document/student
-========================================================= */
 
 exports.downloadStudentDocument =
   async (req, res) => {

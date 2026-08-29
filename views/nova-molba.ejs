@@ -42,12 +42,31 @@
         <div class="form-row">
           <div class="form-group">
             <label for="brIndeks">Број на индекс</label>
-            <input id="brIndeks" name="brIndeks" type="text" placeholder="Пр. 106/2022" required>
+            <input id="brIndeks" name="brIndeks" type="text" placeholder="Пр. 106/2022" required value="<%= studentProfile && studentProfile.brIndeks ? studentProfile.brIndeks : '' %>">
           </div>
 
           <div class="form-group">
             <label for="smer">Насока</label>
-            <input id="smer" name="smer" type="text" placeholder="Пр. КТИ" required>
+            <select
+              id="smer"
+              name="smer"
+              class="form-select"
+              required
+            >
+              <option value="">Изберете насока</option>
+
+              <% majorOptions.forEach((major) => { %>
+
+                <option
+                  value="<%= major %>"
+                  <%= studentProfile && studentProfile.smer === major ? 'selected' : '' %>
+                >
+                  <%= major %>
+                </option>
+
+              <% }) %>
+
+            </select>
           </div>
         </div>
 

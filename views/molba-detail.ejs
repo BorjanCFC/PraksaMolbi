@@ -10,14 +10,14 @@
 <body>
   <%- include('partials/header', { viewer, isImpersonating }) %>
 
-  <main class="container">
+  <main class="container molba-detail-page">
   <!-- detail-dashboard-back-top -->
   <div style="margin-bottom: 1rem;">
     <a
       href="/dashboard"
       class="btn btn-secondary"
     >
-      ← Назад кон dashboard
+      ← Назад
     </a>
   </div>
 
@@ -55,7 +55,7 @@
         </div>
         <div class="detail-row">
           <strong>Датум на поднесување:</strong>
-          <span><%= molba.datum %></span>
+          <span><%= formatDateMk(molba.datum) %></span>
         </div>
         <div class="detail-row">
           <strong>Наслов:</strong>
@@ -101,7 +101,62 @@
           <% } %>
         </div>
 
-  <!-- WORKFLOW_V2_COMPACT -->
+  
+
+        <% if (canArchiveNumber) { %>
+
+          <div
+            class="workflow-inline-section archive-number-edit-section"
+          >
+
+            <h3 class="workflow-inline-title">
+              Архивски број
+            </h3>
+
+            <form
+              action="/dashboard/molba/<%= molba.molbaId %>/archive-number"
+              method="POST"
+              class="archive-number-form"
+            >
+
+              <div class="form-group">
+
+                <label for="arhivskiBroj">
+                  Архивски број
+                </label>
+
+                <input
+                  type="text"
+                  id="arhivskiBroj"
+                  name="arhivskiBroj"
+                  value="<%= molba.arhivskiBroj || '' %>"
+                  required
+                >
+
+              </div>
+
+
+              <div class="form-actions">
+
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                >
+                  <%= molba.arhivskiBroj
+                    ? 'Зачувај измена'
+                    : 'Зачувај архивски број'
+                  %>
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        <% } %>
+
+<!-- WORKFLOW_V2_COMPACT -->
 
   <% if (
        showInternalFeedback &&
@@ -120,7 +175,7 @@
         <div class="workflow-feedback-item">
 
           <div class="workflow-feedback-label">
-            Забелешка од Студентска служба до Продекан
+            Забелешка од студентска служба до продекан
           </div>
 
           <div class="workflow-feedback-text"><%= String(molba.sluzhbaFeedback || '').trim() %></div>
@@ -135,7 +190,7 @@
         <div class="workflow-feedback-item">
 
           <div class="workflow-feedback-label">
-            Забелешка од Продекан до Студентска служба
+            Забелешка од продекан до студентска служба
           </div>
 
           <div class="workflow-feedback-text"><%= String(molba.prodekanFeedback || '').trim() %></div>
@@ -158,7 +213,7 @@
     <div class="workflow-inline-section">
 
       <h3 class="workflow-inline-title">
-        Забелешка за Продекан
+        Забелешка за продекан
       </h3>
 
       <form
@@ -179,18 +234,11 @@
 
         <div class="form-actions workflow-inline-actions">
 
-          <a
-            href="/dashboard"
-            class="btn btn-secondary"
-          >
-            ← Назад
-          </a>
-
           <button
             type="submit"
             class="btn btn-primary"
           >
-            Потврди проверка и испрати до Продекан
+            Потврди проверка и испрати до продекан
           </button>
 
         </div>
@@ -211,7 +259,7 @@
     <div class="workflow-inline-section">
 
       <h3 class="workflow-inline-title">
-        Одлука на Продекан
+        Одлука на продекан
       </h3>
 
 
@@ -286,13 +334,6 @@
 
         <div class="form-actions workflow-inline-actions">
 
-          <a
-            href="/dashboard"
-            class="btn btn-secondary"
-          >
-            ← Назад
-          </a>
-
           <button
             type="submit"
             class="btn btn-primary"
@@ -314,23 +355,7 @@
       </div>
 
       <% if (canArchiveNumber) { %>
-        <div class="admin-action-card">
-          <h3>Архивирање</h3>
-
-          <% if (molba.arhivskiBroj) { %>
-            <p class="subtitle">Архивскиот број е веќе внесен и молбата е проследена за обработка.</p>
-          <% } else { %>
-            <form action="/dashboard/molba/<%= molba.molbaId %>/archive-number" method="POST">
-              <div class="form-group">
-                <label for="arhivskiBroj">Архивски број</label>
-                <input id="arhivskiBroj" name="arhivskiBroj" type="text" maxlength="100" required>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn btn-admin">Зачувај архивски број</button>
-              </div>
-            </form>
-          <% } %>
-        </div>
+        
       <% } %>
 
 
@@ -354,7 +379,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="feedback">Повратна информација</label>
+              <label for="feedback">Повратна информација кон студентот</label>
               <textarea id="feedback" name="feedback" rows="4" placeholder="Внесете причина или забелешка..."><%= molba.feedback || '' %></textarea>
             </div>
             <div class="form-actions">
@@ -379,20 +404,12 @@
 
       <% if (!canManage && !canGenerateMolbaPdf) { %>
         <div class="detail-actions">
-          <a href="/dashboard" class="btn btn-secondary">← Назад кон Dashboard</a>
+          <a href="/dashboard" class="btn btn-secondary">← Назад</a>
         </div>
       <% } %>
     </div>
   
-  <!-- detail-dashboard-back-bottom -->
-  <div style="margin-top: 2rem; margin-bottom: 1rem;">
-    <a
-      href="/dashboard"
-      class="btn btn-secondary"
-    >
-      ← Назад кон dashboard
-    </a>
-  </div>
+  
 
 
   </main>

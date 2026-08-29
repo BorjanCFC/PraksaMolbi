@@ -73,7 +73,7 @@
                 <label for="assignRole">Улога</label>
                 <select id="assignRole" name="role" class="form-select" required>
                   <option value="admin">Админ</option>
-                  <option value="studentska_sluzhba">Студентска Служба</option>
+                  <option value="studentska_sluzhba">Студентска служба</option>
                   <option value="prodekan">Продекан</option>
                   <option value="arhiva">Архива</option>
                 </select>
@@ -184,18 +184,6 @@
       </div>
 
       <script>
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('semestarFilter').addEventListener('change', applyFilters);
-        document.getElementById('academicYearFilter').addEventListener('change', applyFilters);
-        document.getElementById('fromDate').addEventListener('change', applyFilters);
-        document.getElementById('toDate').addEventListener('change', applyFilters);
-
-        document.getElementById('studentIndexFilter').addEventListener('keydown', function (event) {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            applyFilters();
-          }
-        });
 
         function applyFilters() {
           const status = document.getElementById('statusFilter').value;
@@ -229,16 +217,13 @@
       <div class="dashboard-header" style="margin-top: 1.5rem;">
         <div>
           <h2 style="font-size: 1.55rem;">Активни молби</h2>
-          <p style="margin: 0.25rem 0 0; color: #64748b;">
-            Молби кои моментално бараат акција од Вашата улога.
-          </p>
         </div>
       </div>
 
       <% if (activeMolbi.length === 0) { %>
         <div class="empty-state">
-          <h3>Нема активни молби за избраните филтри</h3>
-          <p>Променете ги филтрите или проверете ги завршените молби подолу.</p>
+          <h3><%= hasActiveFilters ? 'Нема активни молби што одговараат на применетите филтри' : 'Во моментот нема активни молби за Вашата улога' %></h3>
+          <p><%= hasActiveFilters ? 'Променете ги или исчистете ги филтрите.' : 'Новите молби што бараат акција ќе се прикажат овде.' %></p>
         </div>
       <% } else { %>
         <div class="table-wrapper">
@@ -308,7 +293,7 @@
                       href="/dashboard/molba/<%= molba.molbaId %>"
                       class="btn btn-small"
                     >
-                      Детали
+                      <%= viewer.role === 'arhiva' ? 'Архивирај' : 'Детали' %>
                     </a>
                   </td>
                 </tr>
@@ -324,16 +309,13 @@
       <div class="dashboard-header" style="margin-top: 2rem;">
         <div>
           <h2 style="font-size: 1.55rem;">Завршени молби</h2>
-          <p style="margin: 0.25rem 0 0; color: #64748b;">
-            Молби за кои обработката на Вашата улога е завршена.
-          </p>
         </div>
       </div>
 
       <% if (completedMolbi.length === 0) { %>
         <div class="empty-state">
-          <h3>Нема завршени молби за избраните филтри</h3>
-          <p>Завршените молби ќе бидат прикажани овде.</p>
+          <h3><%= hasActiveFilters ? 'Нема завршени молби што одговараат на применетите филтри' : 'Во моментот нема завршени молби за Вашата улога' %></h3>
+          <p><%= hasActiveFilters ? 'Променете ги или исчистете ги филтрите.' : 'Завршените молби ќе се прикажуваат овде.' %></p>
         </div>
       <% } else { %>
         <div class="table-wrapper">
@@ -468,14 +450,14 @@
           <label for="toDateStudent">До датум:</label>
           <input id="toDateStudent" class="form-select filter-select" type="date" value="<%= currentToDate %>">
         </div>
+        <button type="button" class="btn btn-primary btn-small" onclick="applyStudentFilters()">Примени</button>
         <button type="button" class="btn btn-secondary btn-small" onclick="clearStudentFilters()">Исчисти</button>
       </div>
 
       <script>
-        document.getElementById('statusFilterStudent').addEventListener('change', applyStudentFilters);
-        document.getElementById('semestarFilterStudent').addEventListener('change', applyStudentFilters);
-        document.getElementById('fromDateStudent').addEventListener('change', applyStudentFilters);
-        document.getElementById('toDateStudent').addEventListener('change', applyStudentFilters);
+
+
+
 
         function applyStudentFilters() {
           const status = document.getElementById('statusFilterStudent').value;
@@ -503,7 +485,7 @@
       <% if (activeMolbi.length === 0) { %>
 
         <div class="empty-state">
-          <h3>Немате активни молби</h3>
+          <h3><%= hasActiveFilters ? 'Нема активни молби што одговараат на применетите филтри' : 'Во моментот немате активни молби' %></h3>
           <p>
             Во моментот немате молби што се во процес на обработка.
           </p>
@@ -547,7 +529,7 @@
                   </td>
 
                   <td>
-                    <%= molba.datum %>
+                    <%= formatDateMk(molba.datum) %>
                   </td>
 
                   <td>
@@ -590,7 +572,7 @@
       <% if (completedMolbi.length === 0) { %>
 
         <div class="empty-state">
-          <h3>Немате завршени молби</h3>
+          <h3><%= hasActiveFilters ? 'Нема завршени молби што одговараат на применетите филтри' : 'Сè уште немате завршени молби' %></h3>
           <p>
             Одобрените и одбиените молби ќе се прикажуваат тука.
           </p>
@@ -634,7 +616,7 @@
                   </td>
 
                   <td>
-                    <%= molba.datum %>
+                    <%= formatDateMk(molba.datum) %>
                   </td>
 
                   <td>
@@ -673,5 +655,191 @@
   </main>
 
   <%- include('partials/footer') %>
+
+
+  <!-- COMPLETED_SHOW_MORE_V1 -->
+
+  <script>
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      function () {
+
+        document
+          .querySelectorAll(
+            '.dashboard-header h2'
+          )
+          .forEach(
+            function (heading) {
+
+              if (
+                heading
+                  .textContent
+                  .trim() !==
+                'Завршени молби'
+              ) {
+                return;
+              }
+
+
+              let node =
+                heading.closest(
+                  '.dashboard-header'
+                );
+
+
+              let tableWrapper =
+                null;
+
+
+              while (
+                node &&
+                node.nextElementSibling
+              ) {
+
+                node = node.nextElementSibling;
+
+
+                if (
+                  node.classList &&
+                  node.classList.contains(
+                    'dashboard-header'
+                  )
+                ) {
+                  break;
+                }
+
+
+                if (
+                  node.classList &&
+                  node.classList.contains(
+                    'table-wrapper'
+                  )
+                ) {
+
+                  tableWrapper = node;
+
+                  break;
+                }
+              }
+
+
+              if (!tableWrapper) {
+                return;
+              }
+
+
+              const rows =
+                Array.from(
+                  tableWrapper.querySelectorAll(
+                    'tbody tr'
+                  )
+                );
+
+
+              if (
+                rows.length <= 10
+              ) {
+                return;
+              }
+
+
+              rows
+                .slice(10)
+                .forEach(
+                  function (row) {
+
+                    row.classList.add(
+                      'completed-extra-row'
+                    );
+                  }
+                );
+
+
+              const actions =
+                document.createElement(
+                  'div'
+                );
+
+
+              actions.className =
+                'completed-show-more-actions';
+
+
+              const button =
+                document.createElement(
+                  'button'
+                );
+
+
+              button.type =
+                'button';
+
+
+              button.className =
+                'btn btn-secondary';
+
+
+              button.textContent =
+                'Види повеќе';
+
+
+              button.dataset.expanded =
+                'false';
+
+
+              button.addEventListener(
+                'click',
+                function () {
+
+                  const expanded =
+                    button.dataset.expanded ===
+                    'true';
+
+
+                  rows
+                    .slice(10)
+                    .forEach(
+                      function (row) {
+
+                        row.classList.toggle(
+                          'completed-extra-row',
+                          expanded
+                        );
+                      }
+                    );
+
+
+                  button.dataset.expanded =
+                    expanded
+                      ? 'false'
+                      : 'true';
+
+
+                  button.textContent =
+                    expanded
+                      ? 'Види повеќе'
+                      : 'Прикажи помалку';
+                }
+              );
+
+
+              actions.appendChild(
+                button
+              );
+
+
+              tableWrapper
+                .insertAdjacentElement(
+                  'afterend',
+                  actions
+                );
+            }
+          );
+      }
+    );
+
+  </script>
+
 </body>
 </html>
