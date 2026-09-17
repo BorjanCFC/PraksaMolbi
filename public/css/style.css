@@ -1880,3 +1880,167 @@ nav {
 .admin-all-roles { color:var(--text-muted); font-size:.82rem; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media (max-width:650px) { .molba-sample-box .btn { width:100%; } .admin-role-registry { padding:1rem .75rem; } }
+
+/* ADMIN_ROLE_TABLE_CLEAN_LAYOUT_START */
+
+/* Glaven container */
+.admin-role-registry {
+    padding: 1.15rem 1.3rem;
+}
+
+/* Horizontalen scroll samo ako ekranot navistina e premal */
+.admin-role-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Pouredno rasporedena tabela */
+.admin-role-table {
+    width: 100%;
+    min-width: 1000px;
+    margin: 0 auto;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.9rem;
+}
+
+.admin-role-table th,
+.admin-role-table td {
+    padding: 0.75rem 0.8rem;
+    vertical-align: middle;
+    text-align: left;
+    overflow-wrap: normal;
+    word-break: normal;
+}
+
+.admin-role-table th {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* EMAIL */
+.admin-role-table th:nth-child(1),
+.admin-role-table td:nth-child(1) {
+    width: 19%;
+    white-space: nowrap;
+}
+
+.admin-role-table td:nth-child(1) {
+    font-size: 0.86rem;
+}
+
+/* ULOGI */
+.admin-role-table th:nth-child(2),
+.admin-role-table td:nth-child(2) {
+    width: 29%;
+    line-height: 1.4;
+}
+
+/* SERVER */
+.admin-role-table th:nth-child(3),
+.admin-role-table td:nth-child(3) {
+    width: 19%;
+    white-space: nowrap;
+}
+
+.admin-role-table td:nth-child(3) {
+    font-size: 0.84rem;
+}
+
+/* AKCII */
+.admin-role-table th:nth-child(4),
+.admin-role-table td:nth-child(4) {
+    width: 33%;
+}
+
+/* Dvete akcii edna pod druga, identicno poramneti */
+.admin-role-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    width: 100%;
+    justify-content: center;
+}
+
+.admin-role-action-form {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) 150px;
+    gap: 0.6rem;
+    align-items: center;
+    width: 100%;
+    margin: 0;
+}
+
+/* Dropdown */
+.admin-role-action-form .form-select {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    padding: 0 0.85rem;
+    margin: 0;
+    font-size: 0.9rem;
+    border-radius: 9px;
+}
+
+/* Dodaj / Otstrani - ista golemina */
+.admin-role-action-form .btn {
+    width: 150px;
+    min-width: 150px;
+    height: 44px;
+    padding: 0 0.8rem;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 0.88rem;
+    line-height: 1;
+    border-radius: 9px;
+}
+
+/* "Site ulogi se dodeleni" da stoi uredno nad Remove */
+.admin-all-roles {
+    display: block;
+    width: 100%;
+    padding: 0.15rem 0;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+/* Tablet */
+@media (max-width: 1150px) {
+    .admin-role-table {
+        min-width: 920px;
+        font-size: 0.86rem;
+    }
+
+    .admin-role-action-form {
+        grid-template-columns: minmax(145px, 1fr) 135px;
+    }
+
+    .admin-role-action-form .btn {
+        width: 135px;
+        min-width: 135px;
+        font-size: 0.82rem;
+    }
+
+    .admin-role-table td:nth-child(1),
+    .admin-role-table td:nth-child(3) {
+        font-size: 0.8rem;
+    }
+}
+
+/* Mobile - se zadrzuva horizontalen scroll namesto da se krshat email adresite */
+@media (max-width: 700px) {
+    .admin-role-registry {
+        padding: 1rem 0.75rem;
+    }
+
+    .admin-role-table {
+        min-width: 880px;
+    }
+}
+
+/* ADMIN_ROLE_TABLE_CLEAN_LAYOUT_END */
+
