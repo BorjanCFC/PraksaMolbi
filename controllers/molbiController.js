@@ -2970,6 +2970,120 @@ exports.getNovaMolba =
    POST /dashboard/nova-molba
 ========================================================= */
 
+
+// MOLBI_ORIGINAL_UPLOAD_FILENAME_V1
+// Preserve the original PDF filename after Multer finishes uploading.
+// Existing files are never overwritten.
+
+const preserveOriginalStudentPdfName = (file) => {
+
+  if (!file || !file.path || !file.originalname) {
+    throw new Error('Missing uploaded document information.');
+  }
+
+  // Never use a client-provided directory as the destination.
+  const original = path.basename(
+    String(file.originalname).replace(/\\/g, '/')
+  );
+
+  const clean = original
+    .replace(/[<>:"|?*\x00-\x1f\x7f]/g, '_')
+    .replace(/[. ]+$/g, '');
+
+  const ext = path.extname(clean);
+
+  if (ext.toLowerCase() !== '.pdf') {
+    throw new Error('Only PDF documents are allowed.');
+  }
+
+  const stem =
+    clean.slice(0, -ext.length)
+      .replace(/^\.+/, '')
+      .trim() || 'dokument';
+
+  const sourcePath = path.resolve(file.path);
+
+  const destinationDir = path.dirname(sourcePath);
+
+  for (let number = 0; number < 10000; number += 1) {
+
+    const suffix =
+      number === 0 ? '' : ` (${number + 1})`;
+
+    const capacity =
+      180 - Buffer.byteLength(ext + suffix, 'utf8');
+
+    let limitedStem = '';
+
+    for (const character of stem) {
+
+      if (
+        Buffer.byteLength(
+          limitedStem + character,
+          'utf8'
+        ) > capacity
+      ) {
+        break;
+      }
+
+      limitedStem += character;
+    }
+
+    const filename =
+      `${limitedStem || 'dokument'}${suffix}${ext}`;
+
+    const destination = path.join(
+      destinationDir,
+      filename
+    );
+
+    if (destination === sourcePath) {
+
+      file.filename = filename;
+
+      return;
+    }
+
+    try {
+
+      // Fail if the destination already exists.
+      fs.copyFileSync(
+        sourcePath,
+        destination,
+        fs.constants.COPYFILE_EXCL
+      );
+
+    } catch (error) {
+
+      if (error.code === 'EEXIST') {
+        continue;
+      }
+
+      throw error;
+    }
+
+    try {
+
+      fs.unlinkSync(sourcePath);
+
+    } catch (error) {
+
+      fs.unlinkSync(destination);
+
+      throw error;
+    }
+
+    // This is the filename saved in Molba.urlPath.
+    file.path = destination;
+
+    file.filename = filename;
+
+    return;
+  }
+
+  throw new Error('Too many files with the same name.');
+};
+
 exports.postNovaMolba =
   async (
     req,
@@ -3163,6 +3277,8 @@ exports.postNovaMolba =
        * GLAVNATA AKCIJA:
        * molbata se kreira nezavisno od email.
        */
+      preserveOriginalStudentPdfName(req.file);
+
       await Molba.create({
         userId:
           user.userId,
