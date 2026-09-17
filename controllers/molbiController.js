@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
 
@@ -67,6 +68,8 @@ const FEIT_MAJOR_SET =
   );
 
 const academicYearPattern = /^\d{4}\/\d{4}$/;
+const allowedCiklusi = new Set(['Прв', 'Втор']);
+
 
 
 const WORKFLOW_STAGE = {
@@ -359,6 +362,35 @@ const roleTipByRole = {
     'Arhiva'
 };
 
+
+const staffRoleValueByTip = Object.fromEntries(
+  Object.entries(roleTipByRole).map(([value, tip]) => [tip, value])
+);
+const adminRoleOptions = Object.entries(roleTipByRole).map(([value, tip]) => ({
+  value,
+  label: getRoleLabel(value),
+  tip
+}));
+
+// Admin-role forms must originate from a session that received a token.
+const ensureAdminRoleCsrf = (req) => {
+  if (!req.session.adminRoleCsrf) {
+    req.session.adminRoleCsrf = crypto.randomBytes(32).toString('hex');
+  }
+  return req.session.adminRoleCsrf;
+};
+const validAdminRoleCsrf = (req) => {
+  const stored = req.session && req.session.adminRoleCsrf;
+  const supplied = req.body && req.body.csrfToken;
+  if (typeof stored !== 'string' || typeof supplied !== 'string' ||
+      !/^[0-9a-f]{64}$/.test(stored) || !/^[0-9a-f]{64}$/.test(supplied)) return false;
+  return crypto.timingSafeEqual(Buffer.from(stored, 'hex'), Buffer.from(supplied, 'hex'));
+};
+const isCurrentAdminAuthorized = async (userId) => {
+  const role = await Role.findOne({ where: { tip: 'Admin' } });
+  if (!role) return false;
+  return !!(await UserRole.findOne({ where: { userId, roleId: role.roleId } }));
+};
 
 const newestFirstOrder = [
   ['createdAt', 'DESC'],
@@ -1045,7 +1077,7 @@ const generateArchivePdfFile = async (molba) => {
           valueFontSize
         )
         .text(
-          ` ${semesterValue} ${academicYearValue}`,
+          ` ${semesterValue} ${academicYearValue}${molba.ciklus ? ' / ' + molba.ciklus + ' циклус' : ''}`,
           {
             width:
               contentWidth,
@@ -1571,6 +1603,7 @@ exports.getDashboard = async (
       status,
       semestar,
       ucebnaGodina,
+      ciklus,
       studentIndex,
       fromDate,
       toDate
@@ -1593,6 +1626,8 @@ exports.getDashboard = async (
           ucebnaGodina &&
           ucebnaGodina !== 'site'
         ) ||
+
+        (ciklus && ciklus !== 'site') ||
 
         String(
           studentIndex || ''
@@ -1900,6 +1935,10 @@ exports.getDashboard = async (
     }
 
 
+    if (ciklus && ciklus !== 'site' && allowedCiklusi.has(ciklus)) {
+      where.ciklus = ciklus;
+    }
+
     addDateFilter(
       where,
       fromDate,
@@ -2082,6 +2121,35 @@ exports.getDashboard = async (
         );
 
 
+    // Only administrators receive the staff account registry.
+    let adminAccounts = [];
+    let adminCsrfToken = null;
+    if (user.role === ROLE.ADMIN) {
+      if (!(await isCurrentAdminAuthorized(user.userId))) {
+        return res.status(403).send('Немате активна администраторска улога. Најавете се повторно.');
+      }
+      adminCsrfToken = ensureAdminRoleCsrf(req);
+      const users = await User.findAll({
+        include: [{
+          model: Role,
+          as: 'roles',
+          where: { tip: { [Op.in]: Object.values(roleTipByRole) } },
+          required: true,
+          through: { attributes: [] }
+        }],
+        order: [['email', 'ASC']]
+      });
+      adminAccounts = users.map((account) => ({
+        userId: account.userId,
+        email: account.email,
+        authServer: account.authServer || 'makedon',
+        roles: account.roles.map((role) => {
+          const value = staffRoleValueByTip[role.tip];
+          return { value, label: getRoleLabel(value) };
+        }).filter((role) => !!role.value).sort((a, b) => a.label.localeCompare(b.label))
+      }));
+    }
+
     return res.render(
       'dashboard',
       {
@@ -2106,6 +2174,11 @@ exports.getDashboard = async (
         isGlobalAdmin:
           user.role ===
           ROLE.ADMIN,
+
+        adminAccounts,
+        adminCsrfToken,
+        adminRoleOptions,
+        currentCiklus: ciklus || 'site',
 
         canManage:
           false,
@@ -2239,6 +2312,12 @@ exports.assignRoleByEmail =
 
 
     try {
+      if (!validAdminRoleCsrf(req)) {
+        return res.status(403).send('Невалидна сесија за промена на улоги. Освежете ја страницата.');
+      }
+      if (!(await isCurrentAdminAuthorized(user.userId))) {
+        return res.status(403).send('Администраторската улога повеќе не е активна.');
+      }
       const email =
         normalizeEmail(
           req.body.email
@@ -2255,7 +2334,7 @@ exports.assignRoleByEmail =
       const authServer =
         String(
           req.body.authServer ||
-          'smail'
+          'makedon'
         )
           .trim()
           .toLowerCase();
@@ -2427,8 +2506,7 @@ exports.assignRoleByEmail =
                * административниот FEIT login.
                */
               if (
-                targetUser.provider !==
-                'local'
+                !targetUser.authServer
               ) {
                 await targetUser.update(
                   {
@@ -2736,6 +2814,78 @@ exports.confirmServiceReview =
 
 
 /* =========================================================
+   POST /dashboard/users/:id/remove-role
+========================================================= */
+exports.removeRoleFromUser = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+  if (actor.role !== ROLE.ADMIN) {
+    return res.status(403).send('Само администратор може да отстранува улоги.');
+  }
+
+  try {
+    if (!validAdminRoleCsrf(req)) {
+      return res.status(403).send('Невалидна сесија. Освежете ја страницата.');
+    }
+    if (!(await isCurrentAdminAuthorized(actor.userId))) {
+      return res.status(403).send('Администраторската улога повеќе не е активна.');
+    }
+    const targetId = Number(req.params.id);
+    const requested = String(req.body.role || '');
+    if (!Number.isSafeInteger(targetId) || targetId <= 0 ||
+        (requested !== 'all' && !assignableStaffRoles.has(requested))) {
+      return res.status(400).send('Невалиден корисник или улога.');
+    }
+
+    const removed = await User.sequelize.transaction(async (transaction) => {
+      const target = await User.findByPk(targetId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+      if (!target) throw new Error('Корисникот не постои.');
+      // Lock the Admin role so concurrent removals cannot remove the last admin.
+      const adminRole = await Role.findOne({
+        where: { tip: 'Admin' }, transaction, lock: transaction.LOCK.UPDATE
+      });
+      if (!adminRole) throw new Error('Администраторската улога не постои.');
+      const roleDefs = await Role.findAll({
+        where: { tip: { [Op.in]: Object.values(roleTipByRole) } }, transaction
+      });
+      const idByValue = new Map(roleDefs.map((role) => [staffRoleValueByTip[role.tip], role.roleId]));
+      const assigned = await UserRole.findAll({
+        where: { userId: targetId, roleId: { [Op.in]: roleDefs.map((r) => r.roleId) } },
+        transaction
+      });
+      const selectedIds = requested === 'all'
+        ? assigned.map((item) => item.roleId)
+        : assigned.filter((item) => item.roleId === idByValue.get(requested)).map((item) => item.roleId);
+      if (!selectedIds.length) throw new Error('Избраната улога не е доделена на корисникот.');
+
+      if (selectedIds.includes(adminRole.roleId)) {
+        if (targetId === actor.userId) {
+          throw new Error('Не можете сами да си ја отстраните администраторската улога.');
+        }
+        const adminCount = await UserRole.count({
+          where: { roleId: adminRole.roleId }, transaction
+        });
+        if (adminCount <= 1) throw new Error('Не може да се отстрани последниот администратор.');
+      }
+      await UserRole.destroy({
+        where: { userId: targetId, roleId: { [Op.in]: selectedIds } }, transaction
+      });
+      return { email: target.email, count: selectedIds.length };
+    });
+
+    req.flash('success', `Отстранети се ${removed.count} улога/улоги од ${removed.email}.`);
+    return res.redirect('/dashboard');
+  } catch (error) {
+    console.error('Remove role error:', error);
+    req.flash('error', error.message || 'Неуспешно отстранување на улога.');
+    return res.redirect('/dashboard');
+  }
+};
+
+/* =========================================================
    GET /dashboard/nova-molba
 ========================================================= */
 
@@ -2841,6 +2991,7 @@ exports.postNovaMolba =
         naslov,
         semestar,
         ucebnaGodina,
+        ciklus,
         description,
         brIndeks,
         smer
@@ -2920,6 +3071,11 @@ exports.postNovaMolba =
         );
       }
 
+
+      if (!allowedCiklusi.has(ciklus)) {
+        req.flash('error', 'Изберете Прв или Втор циклус на студии.');
+        return res.redirect('/dashboard/nova-molba');
+      }
 
       if (
         !brIndeks ||
@@ -3015,6 +3171,8 @@ exports.postNovaMolba =
           naslov.trim(),
 
         semestar,
+
+        ciklus,
 
         ucebnaGodina:
           ucebnaGodina.trim(),

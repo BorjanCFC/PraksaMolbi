@@ -17,6 +17,7 @@ const getEntraConfig = () => {
     clientId,
     clientSecret,
     redirectUri,
+    postLogoutRedirectUri: process.env.ENTRA_POST_LOGOUT_REDIRECT_URI || null,
     scope: process.env.ENTRA_SCOPE || 'openid profile email'
   };
 };
@@ -28,7 +29,7 @@ const isEntraConfigured = () => {
 
 const getTenantIssuer = (tenantId) => `${MICROSOFT_ISSUER_HOST}/${tenantId}/v2.0`;
 
-const buildAuthorizeUrl = (state, nonce) => {
+const buildAuthorizeUrl = (state, nonce, forceInteractiveLogin = true) => {
   const config = getEntraConfig();
   const params = new URLSearchParams({
     client_id: config.clientId,
@@ -40,7 +41,24 @@ const buildAuthorizeUrl = (state, nonce) => {
     nonce
   });
 
+  // First login and login after the seven-day window request a fresh sign-in.
+  // Microsoft Entra policies, not this application, decide whether MFA is required.
+  if (forceInteractiveLogin) {
+    params.set('prompt', 'login');
+  }
+
   return `${MICROSOFT_ISSUER_HOST}/${config.tenantId}${MICROSOFT_AUTHORIZE_PATH}?${params.toString()}`;
+};
+
+const buildLogoutUrl = () => {
+  const config = getEntraConfig();
+  // The fallback is derived from the configured callback origin, not req.query.
+  const postLogoutUri = config.postLogoutRedirectUri ||
+    new URL('/login', config.redirectUri).toString();
+  const params = new URLSearchParams({
+    post_logout_redirect_uri: postLogoutUri
+  });
+  return `${MICROSOFT_ISSUER_HOST}/${config.tenantId}/oauth2/v2.0/logout?${params.toString()}`;
 };
 
 const exchangeCodeForTokens = async (code) => {
@@ -94,6 +112,7 @@ module.exports = {
   getEntraConfig,
   isEntraConfigured,
   buildAuthorizeUrl,
+  buildLogoutUrl,
   exchangeCodeForTokens,
   verifyIdToken,
   generateStateToken

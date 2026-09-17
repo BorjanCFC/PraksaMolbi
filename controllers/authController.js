@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const {
   User,
@@ -19,6 +20,7 @@ const {
 const {
   isEntraConfigured,
   buildAuthorizeUrl,
+  getEntraConfig,
   exchangeCodeForTokens,
   verifyIdToken,
   generateStateToken
@@ -1010,6 +1012,72 @@ exports.postSelectRole = (
 
 
 /* =========================================================
+   SEVEN-DAY MICROSOFT SIGN-IN WINDOW
+
+   This signed cookie is only an interaction hint, NEVER an authentication
+   credential. Every visit still goes through Entra OIDC and token validation.
+   The seven days run from the first successful login, not every visit.
+========================================================= */
+const REMEMBER_COOKIE = 'molbi_ms_login_window';
+const REMEMBER_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+const rememberSecret = () => {
+  const secret = process.env.SESSION_SECRET;
+  return typeof secret === 'string' && secret.length >= 32 ? secret : null;
+};
+
+const rememberSignature = (expiresAt) => {
+  const secret = rememberSecret();
+  if (!secret) return null;
+  return crypto.createHmac('sha256', secret)
+    .update(`molbi-ms-window-v1:${expiresAt}`)
+    .digest('hex');
+};
+
+const getRememberedUntil = (req) => {
+  if (!rememberSecret()) return null;
+  const cookieHeader = req.headers.cookie || '';
+  const pair = cookieHeader.split(';').map((part) => part.trim())
+    .find((part) => part.startsWith(`${REMEMBER_COOKIE}=`));
+  if (!pair) return null;
+
+  let value;
+  try {
+    value = decodeURIComponent(pair.slice(REMEMBER_COOKIE.length + 1));
+  } catch (_) {
+    return null;
+  }
+  const match = /^(\d{13})\.([a-f0-9]{64})$/.exec(value);
+  if (!match) return null;
+
+  const expiresAt = Number(match[1]);
+  const now = Date.now();
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= now ||
+      expiresAt > now + REMEMBER_DURATION_MS) return null;
+
+  const expected = Buffer.from(rememberSignature(match[1]), 'hex');
+  const received = Buffer.from(match[2], 'hex');
+  if (!crypto.timingSafeEqual(expected, received)) return null;
+  return expiresAt;
+};
+
+const setRememberedWindowAfterLogin = (req, res) => {
+  if (!rememberSecret()) return;
+  // Do NOT extend the original window on each subsequent login.
+  if (getRememberedUntil(req)) return;
+  const expiresAt = Date.now() + REMEMBER_DURATION_MS;
+  const signature = rememberSignature(String(expiresAt));
+  const redirectUri = getEntraConfig().redirectUri || '';
+  res.cookie(REMEMBER_COOKIE, `${expiresAt}.${signature}`, {
+    maxAge: REMEMBER_DURATION_MS,
+    httpOnly: true,
+    secure: redirectUri.startsWith('https://'),
+    sameSite: 'lax',
+    path: '/auth/microsoft'
+  });
+};
+
+/* =========================================================
    MICROSOFT ENTRA LOGIN
 ========================================================= */
 
@@ -1046,7 +1114,8 @@ exports.startMicrosoftLogin = (
   return res.redirect(
     buildAuthorizeUrl(
       state,
-      nonce
+      nonce,
+      !getRememberedUntil(req)
     )
   );
 };
@@ -1468,6 +1537,8 @@ exports.microsoftCallback = async (
     }
 
 
+    setRememberedWindowAfterLogin(req, res);
+
     return res.redirect(
       '/dashboard'
     );
@@ -1494,44 +1565,29 @@ exports.microsoftCallback = async (
 
 
 /* =========================================================
-   LOGOUT
+   LOGOUT - destroy ONLY the platform session; preserve Microsoft SSO.
+   The seven-day cookie is NOT a login credential and is intentionally kept.
 ========================================================= */
 
-exports.logout = (
-  req,
-  res
-) => {
+exports.logout = (req, res) => {
+  const sessionUser = req.session && req.session.user;
+  const redirectPath = sessionUser && sessionUser.loginContext === 'administrative'
+    ? '/admin-login'
+    : '/login';
 
-  const loginContext =
-    req.session?.user?.loginContext ||
-    null;
+  if (!req.session) {
+    res.clearCookie('connect.sid');
+    res.set('Cache-Control', 'no-store');
+    return res.redirect(redirectPath);
+  }
 
-
-  const redirectPath =
-    loginContext === 'administrative'
-      ? '/admin-login'
-      : '/login';
-
-
-  req.session.destroy(
-    (err) => {
-
-      if (err) {
-        console.error(
-          'Logout error:',
-          err
-        );
-      }
-
-
-      res.clearCookie(
-        'connect.sid'
-      );
-
-
-      return res.redirect(
-        redirectPath
-      );
+  return req.session.destroy((error) => {
+    if (error) {
+      console.error('Logout session error:', error);
+      return res.status(500).send('Одјавата не успеа. Обидете се повторно.');
     }
-  );
+    res.clearCookie('connect.sid');
+    res.set('Cache-Control', 'no-store');
+    return res.redirect(redirectPath);
+  });
 };

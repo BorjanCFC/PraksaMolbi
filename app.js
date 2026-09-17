@@ -72,8 +72,8 @@ app.use((req, res) => {
 
 ensureUploadDirectories();
 
-sequelize.sync({ alter: true }).then(async () => {
-  console.log('Bazata e povrzana i sinhronizirana.');
+sequelize.authenticate().then(async () => {
+  console.log('Bazata e povrzana. Strukturnite izmeni se primenuvaat so migracii.');
 
   const server = app.listen(PORT, () => {
     console.log(`Serverot raboti na http://localhost:${PORT}`);

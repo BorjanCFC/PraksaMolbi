@@ -57,6 +57,7 @@
           </p>
 
           <form action="/dashboard/assign-role" method="POST">
+            <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
             <div class="form-row">
               <div class="form-group">
                 <label for="assignEmail">Email</label>
@@ -82,8 +83,8 @@
               <div class="form-group">
                 <label for="assignAuthServer">Mail server</label>
                 <select id="assignAuthServer" name="authServer" class="form-select" required>
+                  <option value="makedon" selected>makedon.feit.ukim.edu.mk</option>
                   <option value="smail">smail.feit.ukim.edu.mk</option>
-                  <option value="makedon">makedon.feit.ukim.edu.mk</option>
                 </select>
               </div>
             </div>
@@ -93,6 +94,65 @@
             </div>
           </form>
         </div>
+
+        <section class="admin-role-registry" aria-labelledby="admin-role-list-title">
+          <div class="admin-role-registry-heading">
+            <h3 id="admin-role-list-title">Корисници со административни улоги</h3>
+            <p class="subtitle">Преглед и управување со доделените улоги. Студентската улога не се отстранува од оваа табела.</p>
+          </div>
+          <% if (adminAccounts.length === 0) { %>
+            <p class="admin-role-empty">Нема корисници со доделени административни улоги.</p>
+          <% } else { %>
+            <div class="admin-role-table-scroll">
+              <table class="admin-role-table">
+                <thead><tr><th>Email</th><th>Доделени улоги</th><th>Сервер</th><th>Акции</th></tr></thead>
+                <tbody>
+                  <% adminAccounts.forEach((account) => { %>
+                    <tr>
+                      <td><%= account.email %></td>
+                      <td><%= account.roles.map((role) => role.label).join(', ') %></td>
+                      <td><%= account.authServer === 'makedon' ? 'makedon.feit.ukim.edu.mk' : 'smail.feit.ukim.edu.mk' %></td>
+                      <td>
+                        <div class="admin-role-actions">
+                          <% const availableRoles = adminRoleOptions.filter((option) => !account.roles.some((role) => role.value === option.value)); %>
+                          <% if (availableRoles.length > 0) { %>
+                            <form action="/dashboard/assign-role" method="POST" class="admin-role-action-form">
+                              <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
+                              <input type="hidden" name="email" value="<%= account.email %>">
+                              <input type="hidden" name="authServer" value="<%= account.authServer %>">
+                              <label class="sr-only" for="role-add-<%= account.userId %>">Улога за додавање</label>
+                              <select id="role-add-<%= account.userId %>" name="role" class="form-select" required>
+                                <option value="" selected disabled>Изберете улога</option>
+                                <% availableRoles.forEach((option) => { %>
+                                  <option value="<%= option.value %>"><%= option.label %></option>
+                                <% }) %>
+                              </select>
+                              <button type="submit" class="btn btn-admin">Додај улога</button>
+                            </form>
+                          <% } else { %>
+                            <span class="admin-all-roles">Сите улоги се доделени</span>
+                          <% } %>
+                          <form action="/dashboard/users/<%= account.userId %>/remove-role" method="POST" class="admin-role-action-form" onsubmit="return confirm('Дали сте сигурни дека сакате да ги отстраните избраните улоги од овој корисник?');">
+                            <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
+                            <label class="sr-only" for="role-remove-<%= account.userId %>">Улога за отстранување</label>
+                            <select id="role-remove-<%= account.userId %>" name="role" class="form-select" required>
+                              <option value="" selected disabled>Изберете улога</option>
+                              <% account.roles.forEach((role) => { %>
+                                <option value="<%= role.value %>"><%= role.label %></option>
+                              <% }) %>
+                              <option value="all">Сите административни улоги</option>
+                            </select>
+                            <button type="submit" class="btn btn-danger">Отстрани улога</button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </section>
       <% } %>
 
       <!-- =================================================
@@ -131,6 +191,15 @@
                 <%= year %>
               </option>
             <% }) %>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="ciklusFilter">Циклус на студии:</label>
+          <select id="ciklusFilter" class="form-select filter-select">
+            <option value="site" <%= currentCiklus === 'site' ? 'selected' : '' %>>Сите</option>
+            <option value="Прв" <%= currentCiklus === 'Прв' ? 'selected' : '' %>>Прв циклус</option>
+            <option value="Втор" <%= currentCiklus === 'Втор' ? 'selected' : '' %>>Втор циклус</option>
           </select>
         </div>
 
@@ -189,6 +258,7 @@
           const status = document.getElementById('statusFilter').value;
           const semestar = document.getElementById('semestarFilter').value;
           const ucebnaGodina = document.getElementById('academicYearFilter').value;
+          const ciklus = document.getElementById('ciklusFilter').value;
           const studentIndex = document.getElementById('studentIndexFilter').value.trim();
           const fromDate = document.getElementById('fromDate').value;
           const toDate = document.getElementById('toDate').value;
@@ -198,6 +268,7 @@
           params.set('status', status);
           params.set('semestar', semestar);
           params.set('ucebnaGodina', ucebnaGodina);
+          params.set('ciklus', ciklus);
           params.set('studentIndex', studentIndex);
           params.set('fromDate', fromDate);
           params.set('toDate', toDate);
@@ -207,7 +278,7 @@
 
         function clearFilters() {
           window.location.href =
-            '/dashboard?status=site&semestar=site&ucebnaGodina=site&studentIndex=&fromDate=&toDate=';
+            '/dashboard?status=site&semestar=site&ucebnaGodina=site&ciklus=site&studentIndex=&fromDate=&toDate=';
         }
       </script>
 
@@ -230,12 +301,12 @@
           <table class="molbi-table">
             <thead>
               <tr>
-                <th>#</th>
                 <th>Студент</th>
                 <th>Бр. индекс</th>
                 <th>Архивски број</th>
                 <th>Наслов</th>
                 <th>Семестар / учебна година</th>
+                <th>Циклус на студии</th>
                 <th>Датум</th>
                 <th>Статус</th>
                 <th>Акции</th>
@@ -245,8 +316,6 @@
             <tbody>
               <% activeMolbi.forEach((molba) => { %>
                 <tr>
-                  <td><%= molba.molbaId %></td>
-
                   <td>
                     <%= convertNameToCyrillic(molba.student.ime) %>
                     <%= convertNameToCyrillic(molba.student.prezime) %>
@@ -271,6 +340,7 @@
                     <%= molba.semestar %> /
                     <%= molba.ucebnaGodina || '-' %>
                   </td>
+                  <td><%= molba.ciklus ? molba.ciklus + ' циклус' : '—' %></td>
 
                   <td>
                     <%
@@ -322,12 +392,12 @@
           <table class="molbi-table">
             <thead>
               <tr>
-                <th>#</th>
                 <th>Студент</th>
                 <th>Бр. индекс</th>
                 <th>Архивски број</th>
                 <th>Наслов</th>
                 <th>Семестар / учебна година</th>
+                <th>Циклус на студии</th>
                 <th>Датум</th>
                 <th>Статус</th>
                 <th>Акции</th>
@@ -337,8 +407,6 @@
             <tbody>
               <% completedMolbi.forEach((molba) => { %>
                 <tr>
-                  <td><%= molba.molbaId %></td>
-
                   <td>
                     <%= convertNameToCyrillic(molba.student.ime) %>
                     <%= convertNameToCyrillic(molba.student.prezime) %>
@@ -363,6 +431,7 @@
                     <%= molba.semestar %> /
                     <%= molba.ucebnaGodina || '-' %>
                   </td>
+                  <td><%= molba.ciklus ? molba.ciklus + ' циклус' : '—' %></td>
 
                   <td>
                     <%
@@ -498,9 +567,9 @@
 
             <thead>
               <tr>
-                <th>#</th>
                 <th>Наслов</th>
                 <th>Семестар / учебна година</th>
+                <th>Циклус на студии</th>
                 <th>Датум</th>
                 <th>Статус</th>
                 <th>Акции</th>
@@ -512,11 +581,6 @@
               <% activeMolbi.forEach((molba) => { %>
 
                 <tr>
-
-                  <td>
-                    <%= molba.molbaId %>
-                  </td>
-
                   <td class="desc-cell">
                     <%= (molba.naslov || 'Без наслов').substring(0, 80) %>
                     <%= (molba.naslov || '').length > 80 ? '...' : '' %>
@@ -527,6 +591,7 @@
                     /
                     <%= molba.ucebnaGodina || '-' %>
                   </td>
+                  <td><%= molba.ciklus ? molba.ciklus + ' циклус' : '—' %></td>
 
                   <td>
                     <%= formatDateMk(molba.datum) %>
@@ -585,9 +650,9 @@
 
             <thead>
               <tr>
-                <th>#</th>
                 <th>Наслов</th>
                 <th>Семестар / учебна година</th>
+                <th>Циклус на студии</th>
                 <th>Датум</th>
                 <th>Статус</th>
                 <th>Акции</th>
@@ -599,11 +664,6 @@
               <% completedMolbi.forEach((molba) => { %>
 
                 <tr>
-
-                  <td>
-                    <%= molba.molbaId %>
-                  </td>
-
                   <td class="desc-cell">
                     <%= (molba.naslov || 'Без наслов').substring(0, 80) %>
                     <%= (molba.naslov || '').length > 80 ? '...' : '' %>
@@ -614,6 +674,7 @@
                     /
                     <%= molba.ucebnaGodina || '-' %>
                   </td>
+                  <td><%= molba.ciklus ? molba.ciklus + ' циклус' : '—' %></td>
 
                   <td>
                     <%= formatDateMk(molba.datum) %>

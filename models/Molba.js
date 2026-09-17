@@ -44,6 +44,12 @@ const Molba = sequelize.define('Molba', {
       is: /^\d{4}\/\d{4}$/
     }
   },
+  ciklus: {
+    type: DataTypes.STRING(10),
+    allowNull: true, // Legacy molbi can have an unknown study cycle.
+    defaultValue: null,
+    validate: { isIn: [['Прв', 'Втор']] }
+  },
   description: {
     type: DataTypes.TEXT,
     allowNull: false

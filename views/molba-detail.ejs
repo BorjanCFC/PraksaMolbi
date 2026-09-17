@@ -77,6 +77,10 @@
           <span><%= molba.ucebnaGodina || 'Нема податок' %></span>
         </div>
         <div class="detail-row">
+          <strong>Циклус на студии:</strong>
+          <span><%= molba.ciklus ? molba.ciklus + ' циклус' : 'Не е утврден (стара молба)' %></span>
+        </div>
+        <div class="detail-row">
           <strong>Архивски број:</strong>
           <span><%= molba.arhivskiBroj || 'Не е внесено' %></span>
         </div>
@@ -389,7 +393,7 @@
       <% if (canGenerateMolbaPdf) { %>
         <div class="admin-action-card">
           <h3>Генерирање на PDF</h3>
-          <p class="subtitle">Генерирај PDF и пратај email на студентот.</p>
+          <p class="subtitle">Генерирај PDF документ за молбата.</p>
           <form action="/dashboard/molba/<%= molba.molbaId %>/generate-molba-pdf" method="POST">
             <div class="form-actions">
               <button type="submit" class="btn btn-admin">Генерирај PDF</button>

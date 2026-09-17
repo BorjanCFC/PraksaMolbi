@@ -13,7 +13,11 @@
   <main class="container">
     <div class="form-card">
       <h2>Нова молба</h2>
-      <p class="subtitle">Внесете наслов, текст и задолжително прикачете еден PDF документ.</p>
+      <p class="subtitle">Пополнете ги податоците, внесете го текстот на молбата и приложете еден PDF документ со потребните документи.</p>
+      <div class="molba-sample-box">
+        <div><strong>Пример за текст на молба</strong></div>
+        <a href="/documents/urnek-molba.pdf" download="urnek-molba.pdf" class="btn btn-secondary">Преземи урнек (PDF)</a>
+      </div>
 
       <% if (error && error.length > 0) { %>
         <div class="alert alert-error"><%= error %></div>
@@ -37,6 +41,15 @@
         <div class="form-group">
           <label for="ucebnaGodina">Учебна година</label>
           <input id="ucebnaGodina" name="ucebnaGodina" type="text" class="form-select" placeholder="Пр. 2025/2026" pattern="^\d{4}\/\d{4}$" maxlength="9" required>
+        </div>
+
+        <div class="form-group">
+          <label for="ciklus">Циклус на студии</label>
+          <select id="ciklus" name="ciklus" class="form-select" required>
+            <option value="" selected disabled>Изберете циклус</option>
+            <option value="Прв">Прв циклус</option>
+            <option value="Втор">Втор циклус</option>
+          </select>
         </div>
 
         <div class="form-row">
@@ -78,7 +91,7 @@
         <div class="form-group">
           <label for="document">Прилог (задолжително: PDF)</label>
           <input id="document" name="document" type="file" accept=".pdf,application/pdf" required>
-          <small class="help-text">Прикачете еден PDF фајл со сите дополнителни документи (макс 15MB).</small>
+          <small class="help-text molba-document-help">Прикачете <strong>еден PDF документ</strong> со сите потребни документи: доказ за платена административна такса, потпис или согласност од професор доколку се бара, како и дополнителни уплатници и потврди според видот на барањето. Максимална дозволена големина: <strong>15 MB</strong>.</small>
         </div>
 
         <div class="form-actions">
