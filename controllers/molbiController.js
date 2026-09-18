@@ -626,7 +626,341 @@ const formatDecisionMoment = (value) => {
    PDF GENERATION
 ========================================================= */
 
-const generateArchivePdfFile = async (molba, decisionSigner) => {
+
+const getPdfProdekanIdentity = async () => {
+  try {
+    const prodekanRole = await Role.findOne({
+      where: {
+        tip: 'Prodekan'
+      }
+    });
+
+    if (!prodekanRole) {
+      return {
+        ime: '',
+        prezime: ''
+      };
+    }
+
+    const assignment = await UserRole.findOne({
+      where: {
+        roleId: prodekanRole.roleId
+      },
+      order: [
+        ['userId', 'ASC']
+      ]
+    });
+
+    if (!assignment) {
+      return {
+        ime: '',
+        prezime: ''
+      };
+    }
+
+    const prodekanUser = await User.findByPk(
+      assignment.userId
+    );
+
+    if (!prodekanUser) {
+      return {
+        ime: '',
+        prezime: ''
+      };
+    }
+
+    return {
+      ime: convertNameToCyrillic(
+        prodekanUser.ime || ''
+      ).trim(),
+
+      prezime: convertNameToCyrillic(
+        prodekanUser.prezime || ''
+      ).trim()
+    };
+  } catch (error) {
+    console.error(
+      'PDF Prodekan lookup error:',
+      error
+    );
+
+    return {
+      ime: '',
+      prezime: ''
+    };
+  }
+};
+
+
+const parsePdfCsvLine = (line) => {
+  const values = [];
+  let value = '';
+  let quoted = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (
+        quoted &&
+        line[i + 1] === '"'
+      ) {
+        value += '"';
+        i += 1;
+      } else {
+        quoted = !quoted;
+      }
+
+      continue;
+    }
+
+    if (
+      char === ',' &&
+      !quoted
+    ) {
+      values.push(value);
+      value = '';
+      continue;
+    }
+
+    value += char;
+  }
+
+  values.push(value);
+
+  return values;
+};
+
+
+const getDecisionTimestampFromAuditCsv = (
+  molba
+) => {
+  try {
+    const auditPath =
+      path.join(
+        projectRoot,
+        'logs',
+        'audit.csv'
+      );
+
+    if (
+      !fs.existsSync(
+        auditPath
+      )
+    ) {
+      return null;
+    }
+
+    const csv =
+      fs.readFileSync(
+        auditPath,
+        'utf8'
+      );
+
+    const lines =
+      csv
+        .split(/\r?\n/)
+        .filter(Boolean);
+
+    if (
+      lines.length < 2
+    ) {
+      return null;
+    }
+
+    const header =
+      parsePdfCsvLine(
+        lines[0]
+      );
+
+    const timestampIndex =
+      header.indexOf(
+        'timestamp'
+      );
+
+    const roleIndex =
+      header.indexOf(
+        'role'
+      );
+
+    const methodIndex =
+      header.indexOf(
+        'method'
+      );
+
+    const pathIndex =
+      header.indexOf(
+        'path'
+      );
+
+    if (
+      timestampIndex === -1 ||
+      methodIndex === -1 ||
+      pathIndex === -1
+    ) {
+      return null;
+    }
+
+    const expectedPath =
+      `/dashboard/molba/${molba.molbaId}/status`;
+
+    let latestTimestamp =
+      null;
+
+    for (
+      let i = 1;
+      i < lines.length;
+      i += 1
+    ) {
+      const row =
+        parsePdfCsvLine(
+          lines[i]
+        );
+
+      const timestamp =
+        String(
+          row[timestampIndex] || ''
+        ).trim();
+
+      const role =
+        roleIndex === -1
+          ? ''
+          : String(
+              row[roleIndex] || ''
+            )
+              .trim()
+              .toLowerCase();
+
+      const method =
+        String(
+          row[methodIndex] || ''
+        )
+          .trim()
+          .toUpperCase();
+
+      const loggedPath =
+        String(
+          row[pathIndex] || ''
+        ).trim();
+
+      if (
+        method !== 'POST' ||
+        loggedPath !== expectedPath
+      ) {
+        continue;
+      }
+
+      if (
+        role &&
+        role !== 'prodekan' &&
+        role !== 'продекан'
+      ) {
+        continue;
+      }
+
+      const parsed =
+        new Date(
+          timestamp
+        );
+
+      if (
+        Number.isNaN(
+          parsed.getTime()
+        )
+      ) {
+        continue;
+      }
+
+      if (
+        !latestTimestamp ||
+        parsed > latestTimestamp
+      ) {
+        latestTimestamp =
+          parsed;
+      }
+    }
+
+    return latestTimestamp;
+  } catch (error) {
+    console.error(
+      'PDF audit timestamp lookup error:',
+      error
+    );
+
+    return null;
+  }
+};
+
+
+const formatDecisionDateTimeMk = (
+  value
+) => {
+  if (!value) {
+    return {
+      date: '-',
+      time: '-'
+    };
+  }
+
+  const date =
+    value instanceof Date
+      ? value
+      : new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return {
+      date: '-',
+      time: '-'
+    };
+  }
+
+  const parts =
+    new Intl.DateTimeFormat(
+      'en-GB',
+      {
+        timeZone:
+          'Europe/Skopje',
+        day:
+          '2-digit',
+        month:
+          '2-digit',
+        year:
+          'numeric',
+        hour:
+          '2-digit',
+        minute:
+          '2-digit',
+        hour12:
+          false
+      }
+    ).formatToParts(
+      date
+    );
+
+  const getPart =
+    (type) =>
+      parts.find(
+        (part) =>
+          part.type === type
+      )?.value || '';
+
+  return {
+    date:
+      `${getPart('day')}.${getPart('month')}.${getPart('year')}`,
+
+    time:
+      `${getPart('hour')}:${getPart('minute')}h`
+  };
+};
+
+
+const generateArchivePdfFile = async (
+  molba
+) => {
   const nasoka =
     molba.student.smer ||
     (
@@ -654,18 +988,36 @@ const generateArchivePdfFile = async (molba, decisionSigner) => {
     specificArchiveDir
   );
 
-  const safeIme = String(molba.student.ime || '')
-  .trim()
-  .replace(/\s+/g, '')
-  .replace(/[^\p{L}\p{N}]/gu, '');
+  const safeIme =
+    String(
+      molba.student.ime || ''
+    )
+      .trim()
+      .replace(
+        /\s+/g,
+        ''
+      )
+      .replace(
+        /[^\p{L}\p{N}]/gu,
+        ''
+      );
 
-  const safePrezime = String(molba.student.prezime || '')
-    .trim()
-    .replace(/\s+/g, '')
-    .replace(/[^\p{L}\p{N}]/gu, '');
+  const safePrezime =
+    String(
+      molba.student.prezime || ''
+    )
+      .trim()
+      .replace(
+        /\s+/g,
+        ''
+      )
+      .replace(
+        /[^\p{L}\p{N}]/gu,
+        ''
+      );
 
   const fileName =
-    `Molba-${molba.molbaId}-${safeIme}${safePrezime}.pdf`;
+    `Molbi-${molba.molbaId}-${safeIme}${safePrezime}.pdf`;
 
   const fullPath =
     path.join(
@@ -688,15 +1040,7 @@ const generateArchivePdfFile = async (molba, decisionSigner) => {
       : null;
 
   const studentName =
-    `${
-      convertNameToCyrillic(
-        molba.student.ime
-      )
-    } ${
-      convertNameToCyrillic(
-        molba.student.prezime
-      )
-    }`.trim();
+    `${convertNameToCyrillic(molba.student.ime || '')} ${convertNameToCyrillic(molba.student.prezime || '')}`.trim();
 
   const indexValue =
     molba.student.brIndeks ||
@@ -757,353 +1101,893 @@ const generateArchivePdfFile = async (molba, decisionSigner) => {
     statusValue === 'Одбиена' &&
     feedbackValue !== '';
 
-  const approvedByName = [decisionSigner.ime, decisionSigner.prezime]
-    .map((part) => convertNameToCyrillic(sanitizePdfText(part)))
-    .join(' ').trim();
-  if (!approvedByName || !molba.decisionAt) {
-    throw new Error('Недостига продеканот или времето на одлуката.');
+  const studentLine =
+    [
+      studentName,
+      indexValue,
+      majorValue
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+  const prodekanIdentity =
+    await getPdfProdekanIdentity();
+
+  /*
+   * For the generated PDF use the timestamp of the
+   * actual POST /status action from audit.csv first.
+   * decisionAt is kept as a DB fallback for older
+   * records or when the audit row is unavailable.
+   */
+  let decisionTimestamp =
+    getDecisionTimestampFromAuditCsv(
+      molba
+    );
+
+  if (
+    !decisionTimestamp
+  ) {
+    decisionTimestamp =
+      molba.decisionAt
+        ? new Date(
+            molba.decisionAt
+          )
+        : null;
   }
-  const decisionMoment = formatDecisionMoment(molba.decisionAt);
-  const verificationText =
-    `Овој документ е дигитално потврден од продеканот за настава на ` +
-    `Факултетот за електротехника и информациски технологии, ` +
-    `проф. д-р ${approvedByName} на ${decisionMoment.date} во ${decisionMoment.time}h.`;
 
-  const studentLine = [
-    studentName,
-    indexValue,
-    majorValue
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const decisionDateTime =
+    formatDecisionDateTimeMk(
+      decisionTimestamp
+    );
 
+  const prodekanFullName =
+    [
+      prodekanIdentity.ime,
+      prodekanIdentity.prezime
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    'Продекан';
 
-  await new Promise(
-    (
-      resolve,
-      reject
-    ) => {
+  const confirmationText =
+    `Овој документ е дигитално потврден од продеканот за настава на Факултетот за електротехника и информациски технологии, проф. д-р ${prodekanFullName} на ${decisionDateTime.date} во ${decisionDateTime.time}.`;
 
-      const doc =
-        new PDFDocument({
-          size: 'A4',
-          bufferPages: true,
+  const BASE_BODY_FONT_SIZE = 14;
+  const MIN_BODY_FONT_SIZE = 11;
+  const BODY_FONT_STEP = 0.25;
+  const CONFIRMATION_FONT_SIZE = 9.3;
 
-          margins: {
-            top: 56,
-            left: 56,
-            right: 56,
-            bottom: 56
-          }
-        });
+  const margins = {
+    top: 56,
+    left: 56,
+    right: 56,
+    bottom: 56
+  };
 
-      const pdfChunks = [];
-      doc.on('data', (chunk) => pdfChunks.push(chunk));
-      doc.on('error', reject);
-      doc.on('end', () => {
-        fs.promises.writeFile(fullPath, Buffer.concat(pdfChunks))
-          .then(resolve)
-          .catch(reject);
-      });
+  const leftX = 72;
+  const contentWidth = 450;
+  const bodyStartY = 283;
 
+  const buildPdf = async (
+    bodyFontSize,
+    includeConfirmation,
+    multiPageMode
+  ) => {
+    let pageCount = 1;
+    const chunks = [];
 
-      /* ===================================================
-         CYRILLIC FONTS
-      =================================================== */
+    await new Promise(
+      (resolve, reject) => {
+        const doc =
+          new PDFDocument({
+            size: 'A4',
+            margins
+          });
 
-      const cyrillicFonts =
-        getCyrillicFonts();
-
-      doc.registerFont(
-        'pdf-regular',
-        cyrillicFonts.regular
-      );
-
-      doc.registerFont(
-        'pdf-bold',
-        cyrillicFonts.bold
-      );
-
-      const regularFont =
-        'pdf-regular';
-
-      const boldFont =
-        'pdf-bold';
-
-
-      /* ===================================================
-         LOGOS
-      =================================================== */
-
-      const ukimLogoPath =
-        path.join(
-          projectRoot,
-          'public',
-          'images',
-          'ukim-logo.png'
-        );
-
-      const feitRightLogoPath =
-        path.join(
-          projectRoot,
-          'public',
-          'images',
-          'feitLogoBrowser.png'
-        );
-
-
-      if (
-        fs.existsSync(
-          ukimLogoPath
-        )
-      ) {
-        doc.image(
-          ukimLogoPath,
-          52,
-          52,
-          {
-            fit: [68, 68],
-            align: 'left',
-            valign: 'top'
+        doc.on(
+          'pageAdded',
+          () => {
+            pageCount += 1;
           }
         );
-      }
 
-
-      if (
-        fs.existsSync(
-          feitRightLogoPath
-        )
-      ) {
-        doc.image(
-          feitRightLogoPath,
-          492,
-          52,
-          {
-            fit: [64, 64],
-            align: 'right',
-            valign: 'top'
+        doc.on(
+          'data',
+          (chunk) => {
+            chunks.push(chunk);
           }
         );
-      }
 
+        doc.on(
+          'error',
+          reject
+        );
 
-      doc.fillColor(
-        '#000000'
-      );
+        doc.on(
+          'end',
+          resolve
+        );
 
-
-      const headerX = 108;
-      const headerWidth = 380;
-
-
-      doc
-          .font(boldFont)
-          .fontSize(14)
-          .text(
-            'Универзитет "Св. Кирил и Методиј" во Скопје',
-            headerX,
-            68,
+        try {
+          const fontCandidates = [
             {
-              width:
-                headerWidth,
-
-              align:
-                'center',
-
-              lineBreak:
-                false
+              regular:
+                'C:/Windows/Fonts/times.ttf',
+              bold:
+                'C:/Windows/Fonts/timesbd.ttf'
+            },
+            {
+              regular:
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+              bold:
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+            },
+            {
+              regular:
+                '/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf',
+              bold:
+                '/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf'
             }
+          ];
+
+          const cyrillicFonts =
+            fontCandidates.find(
+              (fontSet) =>
+                fs.existsSync(
+                  fontSet.regular
+                ) &&
+                fs.existsSync(
+                  fontSet.bold
+                )
+            );
+
+          if (!cyrillicFonts) {
+            throw new Error(
+              'Nema dostapen Cyrillic PDF font na sistemot.'
+            );
+          }
+
+          doc.registerFont(
+            'pdf-regular',
+            cyrillicFonts.regular
           );
 
+          doc.registerFont(
+            'pdf-bold',
+            cyrillicFonts.bold
+          );
 
-      doc
-        .font(boldFont)
-        .fontSize(14)
-        .text(
-          'ФАКУЛТЕТ ЗА ЕЛЕКТРОТЕХНИКА И',
-          headerX,
-          110,
-          {
-            width:
-              headerWidth,
+          const regularFont =
+            'pdf-regular';
 
-            align:
-              'center'
+          const boldFont =
+            'pdf-bold';
+
+          const ukimLogoPath =
+            path.join(
+              projectRoot,
+              'public',
+              'images',
+              'ukim-logo.png'
+            );
+
+          const feitRightLogoPath =
+            path.join(
+              projectRoot,
+              'public',
+              'images',
+              'feitLogoBrowser.png'
+            );
+
+          if (
+            fs.existsSync(
+              ukimLogoPath
+            )
+          ) {
+            doc.image(
+              ukimLogoPath,
+              52,
+              52,
+              {
+                fit: [
+                  68,
+                  68
+                ],
+                align:
+                  'left',
+                valign:
+                  'top'
+              }
+            );
           }
-        );
 
-
-      doc
-        .font(boldFont)
-        .fontSize(14)
-        .text(
-          'ИНФОРМАЦИСКИ ТЕХНОЛОГИИ',
-          headerX,
-          132,
-          {
-            width:
-              headerWidth,
-
-            align:
-              'center'
+          if (
+            fs.existsSync(
+              feitRightLogoPath
+            )
+          ) {
+            doc.image(
+              feitRightLogoPath,
+              492,
+              52,
+              {
+                fit: [
+                  64,
+                  64
+                ],
+                align:
+                  'right',
+                valign:
+                  'top'
+              }
+            );
           }
-        );
 
+          doc.fillColor(
+            '#000000'
+          );
 
-      // MOLBI_SHARED_PDF_TOP_LAYOUT_V3
-      // The date and archive number use the same size as the application body.
-      // Draw the same heading in the sizing trial and in the finished PDF.
-      const renderApplicationTop = (target, size) => {
-        target.fillColor('#000000');
-        target.font(boldFont).fontSize(size)
-          .text('Датум:', 72, 184, { continued: true });
-        target.font(regularFont).fontSize(size)
-          .text(` ${submitDateValue}`);
+          const headerX = 100;
+          const headerWidth = 395;
 
-        target.font(boldFont).fontSize(size)
-          .text('Архивски број:', 350, 184, { continued: true });
-        target.font(regularFont).fontSize(size)
-          .text(` ${archiveNumberValue}`);
+          doc
+            .font(boldFont)
+            .fontSize(11.5)
+            .text(
+              'УНИВЕРЗИТЕТ “Св. КИРИЛ И МЕТОДИЈ” во СКОПЈЕ',
+              headerX,
+              58,
+              {
+                width:
+                  headerWidth,
+                align:
+                  'center',
+                lineBreak:
+                  false
+              }
+            );
 
-        // Smaller document heading and a shorter gap before the first field.
-        target.font(boldFont).fontSize(16)
-          .text('Молба', 0, 229, { align: 'center' });
-      };
+          doc
+            .font(boldFont)
+            .fontSize(14)
+            .text(
+              'ФАКУЛТЕТ ЗА ЕЛЕКТРОТЕХНИКА И',
+              headerX,
+              86,
+              {
+                width:
+                  headerWidth,
+                align:
+                  'center'
+              }
+            );
 
-      // MOLBI_SHARED_PDF_BODY_SIZE_V2
-      // The institutional header stays fixed. Date, archive number and
-      // all application labels and values use one shared font size.
-      // The slightly smaller heading "Молба" remains 16 pt.
-      const leftX = 72;
-      const contentWidth = 450;
-      const bodyText = descriptionValue || '-';
+          doc
+            .font(boldFont)
+            .fontSize(14)
+            .text(
+              'ИНФОРМАТИЧКИ ТЕХНОЛОГИИ',
+              headerX,
+              108,
+              {
+                width:
+                  headerWidth,
+                align:
+                  'center'
+              }
+            );
 
-      // PDFKit works in points, so this is 0.5 pt larger than the old 8.8 pt.
-      const footerFontSize = 9.3;
-      const footerLineGap = 2;
-      doc.font(regularFont).fontSize(footerFontSize);
-      const footerHeight = doc.heightOfString(verificationText, {
-        width: contentWidth, align: 'center', lineGap: footerLineGap
-      });
-      const verificationY = doc.page.height - 62 - footerHeight;
-      // Reserve space for the separator and a visible gap above the footer.
-      const bodyLimitY = verificationY - 24;
+          doc
+            .font(boldFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              'Датум:',
+              72,
+              170,
+              {
+                continued:
+                  true
+              }
+            );
 
-      const renderApplicationBody = (target, size) => {
-        const lineGap = size >= 12 ? 2.5 : 1.5;
-        const rowGap = size >= 13 ? 12 : (size >= 12 ? 9 : 7);
-        const descriptionGap = size >= 13 ? 16 : 11;
-        const statusGap = size >= 13 ? 17 : 12;
-        const feedbackGap = size >= 13 ? 17 : 12;
-        let currentY = 283;
+          doc
+            .font(regularFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              ` ${submitDateValue}`
+            );
 
-        // Identical rendering function for the dry run and the actual PDF:
-        // bold label and normal value, but the SAME point size everywhere.
-        const field = (label, value) => {
-          target.fillColor('#000000').font(boldFont).fontSize(size)
-            .text(label, leftX, currentY, {
-              continued: true, width: contentWidth, lineGap
-            });
-          target.font(regularFont).fontSize(size)
-            .text(` ${value}`, { width: contentWidth, lineGap });
-          currentY = target.y;
-        };
+          doc
+            .font(boldFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              'Архивски број:',
+              350,
+              170,
+              {
+                continued:
+                  true
+              }
+            );
 
-        field('Наслов на молбата:', titleValue);
-        currentY += rowGap;
-        field('Студент:', studentLine);
-        currentY += rowGap;
-        field('Семестар и учебна година:',
-          `${semesterValue} ${academicYearValue}` +
-          (molba.ciklus ? ` / ${molba.ciklus} циклус` : ''));
+          doc
+            .font(regularFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              ` ${archiveNumberValue}`
+            );
 
-        currentY += descriptionGap;
-        target.font(boldFont).fontSize(size)
-          .text('Опис на молбата:', leftX, currentY, {
-            width: contentWidth, lineGap
-          });
-        currentY = target.y + 4;
-        target.font(regularFont).fontSize(size)
-          .text(bodyText, leftX, currentY, {
-            width: contentWidth, lineGap
-          });
+          doc
+            .font(boldFont)
+            .fontSize(16)
+            .text(
+              'Молба',
+              0,
+              225,
+              {
+                align:
+                  'center'
+              }
+            );
 
-        currentY = target.y + statusGap;
-        field('Статус:', statusValue);
+          let y =
+            bodyStartY;
 
-        if (shouldRenderFeedback) {
-          currentY += feedbackGap;
-          target.font(boldFont).fontSize(size)
-            .text('Повратна информација:', leftX, currentY, {
-              width: contentWidth, lineGap
-            });
-          currentY = target.y + 4;
-          target.font(regularFont).fontSize(size)
-            .text(feedbackValue, leftX, currentY, {
-              width: contentWidth, lineGap
-            });
-          currentY = target.y;
+          doc
+            .font(boldFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              'Наслов на молбата:',
+              leftX,
+              y,
+              {
+                continued:
+                  true
+              }
+            );
+
+          doc
+            .font(regularFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              ` ${titleValue}`,
+              {
+                width:
+                  contentWidth,
+                lineGap:
+                  3
+              }
+            );
+
+          y =
+            doc.y + 10;
+
+          doc
+            .font(boldFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              'Студент:',
+              leftX,
+              y,
+              {
+                continued:
+                  true
+              }
+            );
+
+          doc
+            .font(regularFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              ` ${studentLine}`,
+              {
+                width:
+                  contentWidth,
+                lineGap:
+                  3
+              }
+            );
+
+          y =
+            doc.y + 10;
+
+          doc
+            .font(boldFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              'Семестар и учебна година:',
+              leftX,
+              y,
+              {
+                continued:
+                  true
+              }
+            );
+
+          doc
+            .font(regularFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              ` ${semesterValue} ${academicYearValue}${molba.ciklus ? ' / ' + molba.ciklus + ' циклус' : ''}`,
+              {
+                width:
+                  contentWidth,
+                lineGap:
+                  3
+              }
+            );
+
+          y =
+            doc.y + 14;
+
+          doc
+            .font(boldFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              'Опис на молбата:',
+              leftX,
+              y,
+              {
+                continued:
+                  true
+              }
+            );
+
+          doc
+            .font(regularFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              ` ${descriptionValue || '-'}`,
+              {
+                width:
+                  contentWidth,
+                lineGap:
+                  4
+              }
+            );
+
+          const statusHeight =
+            doc.heightOfString(
+              `Статус: ${statusValue}`,
+              {
+                width:
+                  contentWidth,
+                lineGap:
+                  2,
+                font:
+                  regularFont,
+                size:
+                  bodyFontSize
+              }
+            );
+
+          const feedbackHeight =
+            shouldRenderFeedback
+              ? doc.heightOfString(
+                  `Повратна информација: ${feedbackValue}`,
+                  {
+                    width:
+                      contentWidth,
+                    lineGap:
+                      3,
+                    font:
+                      regularFont,
+                    size:
+                      bodyFontSize
+                  }
+                ) + 18
+              : 0;
+
+          const confirmationHeight =
+            includeConfirmation
+              ? doc.heightOfString(
+                  confirmationText,
+                  {
+                    width:
+                      contentWidth,
+                    lineGap:
+                      2,
+                    font:
+                      regularFont,
+                    size:
+                      CONFIRMATION_FONT_SIZE
+                  }
+                )
+              : 0;
+
+          const gapBetweenBlocks =
+            14;
+
+          const footerReserve =
+            statusHeight +
+            feedbackHeight +
+            confirmationHeight +
+            gapBetweenBlocks +
+            18;
+
+          const pageBottom =
+            doc.page.height -
+            doc.page.margins.bottom;
+
+          let statusY =
+            doc.y + 28;
+
+          if (
+            includeConfirmation
+          ) {
+            statusY =
+              Math.max(
+                statusY,
+                pageBottom -
+                  footerReserve
+              );
+          }
+
+          if (
+            statusY +
+              footerReserve >
+              pageBottom + 1
+          ) {
+            doc.addPage();
+
+            statusY =
+              doc.page.height -
+              doc.page.margins.bottom -
+              footerReserve;
+          }
+
+          doc
+            .font(boldFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              'Статус:',
+              leftX,
+              statusY,
+              {
+                continued:
+                  true
+              }
+            );
+
+          doc
+            .font(regularFont)
+            .fontSize(
+              bodyFontSize
+            )
+            .text(
+              ` ${statusValue}`,
+              {
+                width:
+                  contentWidth
+              }
+            );
+
+          if (
+            shouldRenderFeedback
+          ) {
+            doc
+              .font(boldFont)
+              .fontSize(
+                bodyFontSize
+              )
+              .text(
+                'Повратна информација:',
+                leftX,
+                doc.y + 18,
+                {
+                  continued:
+                    true
+                }
+              );
+
+            doc
+              .font(regularFont)
+              .fontSize(
+                bodyFontSize
+              )
+              .text(
+                ` ${feedbackValue}`,
+                {
+                  width:
+                    contentWidth,
+                  lineGap:
+                    3
+                }
+              );
+          }
+
+          if (
+            includeConfirmation
+          ) {
+            const confirmationHeightNow =
+              doc.heightOfString(
+                confirmationText,
+                {
+                  width:
+                    contentWidth,
+                  lineGap:
+                    2,
+                  font:
+                    regularFont,
+                  size:
+                    CONFIRMATION_FONT_SIZE
+                }
+              );
+
+            let confirmationY =
+              Math.max(
+                doc.y + 10,
+                doc.page.height -
+                  doc.page.margins.bottom -
+                  confirmationHeightNow
+              );
+
+            if (
+              confirmationY +
+                confirmationHeightNow >
+              doc.page.height -
+                doc.page.margins.bottom +
+                1
+            ) {
+              doc.addPage();
+
+              const finalBlockHeight =
+                statusHeight +
+                feedbackHeight +
+                confirmationHeightNow +
+                gapBetweenBlocks;
+
+              const finalStatusY =
+                doc.page.height -
+                doc.page.margins.bottom -
+                finalBlockHeight;
+
+              doc
+                .font(boldFont)
+                .fontSize(
+                  bodyFontSize
+                )
+                .text(
+                  'Статус:',
+                  leftX,
+                  finalStatusY,
+                  {
+                    continued:
+                      true
+                  }
+                );
+
+              doc
+                .font(regularFont)
+                .fontSize(
+                  bodyFontSize
+                )
+                .text(
+                  ` ${statusValue}`,
+                  {
+                    width:
+                      contentWidth
+                  }
+                );
+
+              if (
+                shouldRenderFeedback
+              ) {
+                doc
+                  .font(boldFont)
+                  .fontSize(
+                    bodyFontSize
+                  )
+                  .text(
+                    'Повратна информација:',
+                    leftX,
+                    doc.y + 18,
+                    {
+                      continued:
+                        true
+                    }
+                  );
+
+                doc
+                  .font(regularFont)
+                  .fontSize(
+                    bodyFontSize
+                  )
+                  .text(
+                    ` ${feedbackValue}`,
+                    {
+                      width:
+                        contentWidth,
+                      lineGap:
+                        3
+                    }
+                  );
+              }
+
+              confirmationY =
+                doc.page.height -
+                doc.page.margins.bottom -
+                confirmationHeightNow;
+            }
+
+            doc
+              .font(regularFont)
+              .fontSize(
+                CONFIRMATION_FONT_SIZE
+              )
+              .text(
+                confirmationText,
+                leftX,
+                confirmationY,
+                {
+                  width:
+                    contentWidth,
+                  lineGap:
+                    2,
+                  align:
+                    'left'
+                }
+              );
+          }
+
+          doc.end();
+        } catch (error) {
+          reject(error);
         }
+      }
+    );
 
-        return currentY;
-      };
+    return {
+      buffer:
+        Buffer.concat(
+          chunks
+        ),
+      pageCount
+    };
+  };
 
-      // Measure with the same PDFKit engine, fonts and drawing calls used for
-      // the finished document. Never shrink just the description to tiny text.
-      let sharedFontSize = null;
-      for (let quarterPoints = 56; quarterPoints >= 44; quarterPoints--) {
-        const candidate = quarterPoints / 4; // 14 -> 11 pt, step 0.25 pt.
-        const measurement = new PDFDocument({
-          size: 'A4', bufferPages: true,
-          margins: { top: 56, left: 56, right: 56, bottom: 56 }
-        });
-        measurement.on('data', () => {});
-        measurement.on('error', () => {});
-        measurement.registerFont(regularFont, cyrillicFonts.regular);
-        measurement.registerFont(boldFont, cyrillicFonts.bold);
+  const bodyOnly =
+    await buildPdf(
+      BASE_BODY_FONT_SIZE,
+      false,
+      'body-only'
+    );
 
-        renderApplicationTop(measurement, candidate);
-        const measuredBottom = renderApplicationBody(measurement, candidate);
-        const onePage = measurement.bufferedPageRange().count === 1;
-        measurement.end();
+  let selectedBodyFontSize =
+    BASE_BODY_FONT_SIZE;
 
-        if (onePage && measuredBottom <= bodyLimitY) {
-          sharedFontSize = candidate;
+  let finalPdf;
+
+  if (
+    bodyOnly.pageCount > 1
+  ) {
+    finalPdf =
+      await buildPdf(
+        BASE_BODY_FONT_SIZE,
+        true,
+        'multi-page'
+      );
+  } else {
+    finalPdf =
+      await buildPdf(
+        BASE_BODY_FONT_SIZE,
+        true,
+        'adaptive'
+      );
+
+    if (
+      finalPdf.pageCount > 1
+    ) {
+      for (
+        let size =
+          BASE_BODY_FONT_SIZE -
+          BODY_FONT_STEP;
+        size >=
+          MIN_BODY_FONT_SIZE;
+        size -=
+          BODY_FONT_STEP
+      ) {
+        const candidate =
+          await buildPdf(
+            Number(
+              size.toFixed(2)
+            ),
+            true,
+            'adaptive'
+          );
+
+        if (
+          candidate.pageCount === 1
+        ) {
+          selectedBodyFontSize =
+            Number(
+              size.toFixed(2)
+            );
+
+          finalPdf =
+            candidate;
+
           break;
         }
       }
 
-      if (sharedFontSize === null) {
-        throw new Error('Текстот е предолг за читлив PDF на една страница ' +
-          '(минимум 11 pt за сите полиња). Скратете го описот или повратната информација.');
-      }
+      if (
+        finalPdf.pageCount > 1
+      ) {
+        selectedBodyFontSize =
+          MIN_BODY_FONT_SIZE;
 
-      // Draw exactly the same body that passed the one-page dry run.
-      renderApplicationTop(doc, sharedFontSize);
-      const actualBottom = renderApplicationBody(doc, sharedFontSize);
-      if (doc.bufferedPageRange().count !== 1 || actualBottom > bodyLimitY) {
-        throw new Error('PDF содржината не собира на една страница без преклопување.');
+        finalPdf =
+          await buildPdf(
+            MIN_BODY_FONT_SIZE,
+            true,
+            'multi-page'
+          );
       }
-
-      // The confirmation is fixed to the physical bottom, as before.
-      doc.strokeColor('#b2bdca').lineWidth(0.5)
-        .moveTo(leftX, verificationY - 10)
-        .lineTo(leftX + contentWidth, verificationY - 10).stroke();
-      doc.fillColor('#242b33').font(regularFont).fontSize(footerFontSize)
-        .text(verificationText, leftX, verificationY, {
-          width: contentWidth, align: 'center', lineGap: footerLineGap
-        });
-      if (doc.bufferedPageRange().count !== 1) {
-        throw new Error('PDF потврдата зафати повеќе од една страница.');
-      }
-      doc.end();
     }
+  }
+
+  const tempPath =
+    `${fullPath}.tmp-${process.pid}-${Date.now()}`;
+
+  fs.writeFileSync(
+    tempPath,
+    finalPdf.buffer
   );
 
+  if (
+    fs.existsSync(
+      fullPath
+    )
+  ) {
+    fs.rmSync(
+      fullPath,
+      {
+        force:
+          true
+      }
+    );
+  }
+
+  fs.renameSync(
+    tempPath,
+    fullPath
+  );
+
+  console.log(
+    `[PDF] molba=${molba.molbaId} pages=${finalPdf.pageCount} bodyFont=${selectedBodyFontSize}pt confirmation=${CONFIRMATION_FONT_SIZE}pt`
+  );
 
   return relativePath;
 };
+
 
 
 /* =========================================================
