@@ -2187,3 +2187,49 @@ nav {
   }
 }
 /* /MOLBI_DECISION_PROOF_ONE_PAGE_V1 */
+
+/* MOLBI_ADMIN_DETAIL_NAV_BUTTONS_V1 */
+.admin-account-detail .admin-detail-action-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 205px;
+  align-items: center;
+  column-gap: 0.8rem;
+}
+
+.admin-account-detail .admin-detail-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-account-detail .admin-detail-action-form button.btn,
+.admin-account-detail .admin-detail-footer button.btn {
+  width: 205px;
+  min-width: 205px;
+  max-width: 205px;
+  height: 46px;
+  min-height: 46px;
+  padding: 0 0.85rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .admin-account-detail .admin-detail-action-form {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.75rem;
+  }
+
+  .admin-account-detail .admin-detail-action-form button.btn,
+  .admin-account-detail .admin-detail-footer button.btn {
+    width: 205px;
+    min-width: 0;
+    max-width: 100%;
+    justify-self: end;
+  }
+}
+/* /MOLBI_ADMIN_DETAIL_NAV_BUTTONS_V1 */

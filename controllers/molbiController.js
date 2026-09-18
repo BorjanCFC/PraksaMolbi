@@ -2279,7 +2279,7 @@ exports.updateAdminUserName = async (req, res) => {
       req.session.user.prezime = prezime;
     }
     req.flash('success', 'Името и презимето се успешно зачувани.');
-    return res.redirect(`/dashboard/admin-users/${id}`);
+    return res.redirect('/dashboard');
   } catch (error) {
     console.error('Admin name update error:', error);
     req.flash('error', 'Неуспешно зачувување на името и презимето.');
@@ -2649,7 +2649,7 @@ exports.assignRoleByEmail =
       );
 
 
-      return res.redirect(returnPath);
+      return res.redirect('/dashboard');
 
     } catch (error) {
       console.error(
@@ -2893,8 +2893,7 @@ exports.removeRoleFromUser = async (req, res) => {
     });
 
     req.flash('success', `Отстранети се ${removed.count} улога/улоги од ${removed.email}.`);
-    return res.redirect(removed.remaining > 0
-      ? `/dashboard/admin-users/${targetId}` : '/dashboard');
+    return res.redirect('/dashboard');
   } catch (error) {
     console.error('Remove role error:', error);
     req.flash('error', error.message || 'Неуспешно отстранување на улога.');
