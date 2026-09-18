@@ -2044,3 +2044,146 @@ nav {
 
 /* ADMIN_ROLE_TABLE_CLEAN_LAYOUT_END */
 
+
+
+/* MOLBI_ADMIN_NAMES_DETAIL_V1: compact directory and separate management page */
+.admin-user-directory {
+  width: 100%; min-width: 1050px; table-layout: fixed; border-collapse: collapse;
+}
+.admin-user-directory th, .admin-user-directory td {
+  padding: .85rem .7rem; vertical-align: middle; overflow-wrap: normal; word-break: normal;
+}
+.admin-user-directory th:nth-child(1), .admin-user-directory td:nth-child(1) { width: 17%; }
+.admin-user-directory th:nth-child(2), .admin-user-directory td:nth-child(2) { width: 25%; }
+.admin-user-directory th:nth-child(3), .admin-user-directory td:nth-child(3) { width: 23%; }
+.admin-user-directory th:nth-child(4), .admin-user-directory td:nth-child(4) { width: 23%; }
+.admin-user-directory th:nth-child(5), .admin-user-directory td:nth-child(5) { width: 12%; min-width: 0; }
+.admin-user-directory .admin-directory-name, .admin-user-directory .admin-directory-email,
+.admin-user-directory .admin-directory-server { white-space: nowrap; font-size: .82rem; }
+.admin-user-directory .admin-directory-roles { line-height: 1.45; font-size: .85rem; }
+.admin-user-directory .admin-directory-action .btn { display: inline-flex; justify-content: center; align-items: center; width: 100%; }
+.admin-user-directory td:last-child, .admin-user-directory th:last-child { min-width: 0; }
+.admin-account-detail { max-width: 1120px; }
+.admin-detail-back { display: inline-flex; margin-bottom: 1.3rem; }
+.admin-detail-card { background: #fff; border: 1px solid var(--border); border-radius: 16px;
+  padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm); }
+.admin-detail-card h2, .admin-detail-card h3 { color: var(--primary); margin: 0 0 .6rem; }
+.admin-detail-card .subtitle { color: var(--text-light); line-height: 1.5; margin: .25rem 0 1.25rem; }
+.admin-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.admin-detail-tag { border-radius: 30px; background: #eaf3fb; color: var(--primary); padding: .45rem 1rem; font-weight: 700; }
+.admin-detail-info { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; }
+.admin-detail-info > div { display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
+.admin-detail-info strong { font-size: .82rem; color: var(--text-light); }
+.admin-detail-info span { overflow-wrap: anywhere; }
+.admin-detail-name-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.admin-detail-name-grid .form-group { min-width: 0; }
+.admin-detail-name-grid input { width: 100%; box-sizing: border-box; }
+.admin-detail-action-form { display: grid; grid-template-columns: minmax(0,1fr) 190px; gap: .8rem; align-items: center; }
+.admin-detail-action-form .form-select { width: 100%; min-width: 0; height: 48px; margin: 0; }
+.admin-detail-action-form .btn { width: 100%; min-height: 48px; margin: 0; display: flex; align-items: center; justify-content: center; }
+.admin-detail-footer { display: flex; justify-content: flex-end; margin-top: .8rem; }
+.admin-detail-muted { color: var(--text-light); margin-bottom: 0; }
+@media (max-width: 760px) {
+  .admin-detail-info, .admin-detail-name-grid { grid-template-columns: 1fr; }
+  .admin-detail-action-form { grid-template-columns: 1fr; }
+  .admin-detail-card { padding: 1rem; }
+}
+
+
+/* MOLBI_ADMIN_CYRILLIC_LAYOUT_BACK_V2: readable admin directory */
+.admin-role-registry { padding: 1.4rem 1.25rem; }
+.admin-role-table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.admin-role-table.admin-user-directory {
+  width: 100%; min-width: 1250px; table-layout: fixed; border-collapse: collapse;
+  font-size: .96rem;
+}
+.admin-role-table.admin-user-directory th,
+.admin-role-table.admin-user-directory td {
+  padding: 1rem .85rem; vertical-align: middle; text-align: left;
+  box-sizing: border-box; overflow-wrap: normal; word-break: normal;
+}
+.admin-role-table.admin-user-directory th { font-size: .91rem; }
+.admin-role-table.admin-user-directory th:nth-child(1),
+.admin-role-table.admin-user-directory td:nth-child(1) { width: 17%; }
+.admin-role-table.admin-user-directory th:nth-child(2),
+.admin-role-table.admin-user-directory td:nth-child(2) { width: 24%; }
+.admin-role-table.admin-user-directory th:nth-child(3),
+.admin-role-table.admin-user-directory td:nth-child(3) { width: 28%; }
+.admin-role-table.admin-user-directory th:nth-child(4),
+.admin-role-table.admin-user-directory td:nth-child(4) { width: 21%; }
+.admin-role-table.admin-user-directory th:nth-child(5),
+.admin-role-table.admin-user-directory td:nth-child(5) { width: 10%; }
+.admin-role-table.admin-user-directory .admin-directory-name,
+.admin-role-table.admin-user-directory .admin-directory-email,
+.admin-role-table.admin-user-directory .admin-directory-server {
+  white-space: nowrap; font-size: .92rem;
+}
+.admin-role-table.admin-user-directory .admin-directory-roles {
+  white-space: normal !important; font-size: .95rem; line-height: 1.65;
+}
+.admin-role-table.admin-user-directory .admin-directory-role {
+  display: inline-block; white-space: nowrap; margin-right: .38rem;
+}
+.admin-role-table.admin-user-directory .admin-directory-action .btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; min-width: 0; padding: .55rem .5rem;
+  font-size: .91rem; white-space: nowrap; box-sizing: border-box;
+}
+.admin-detail-bottom-nav { display: flex; justify-content: flex-start; margin: .35rem 0 1.5rem; }
+.admin-detail-bottom-nav .admin-detail-back { margin-bottom: 0; }
+/* /MOLBI_ADMIN_CYRILLIC_LAYOUT_BACK_V2 */
+
+
+/* MOLBI_DECISION_PROOF_ONE_PAGE_V1: no horizontal scrolling in admin directory */
+.admin-role-registry .admin-role-table-scroll {
+  width: 100%; overflow-x: visible !important; overflow-y: visible !important;
+}
+.admin-role-registry .admin-role-table.admin-user-directory {
+  display: table; width: 100% !important; min-width: 0 !important;
+  max-width: 100% !important; table-layout: fixed; border-collapse: collapse;
+  font-size: .9rem;
+}
+.admin-role-registry .admin-role-table.admin-user-directory th,
+.admin-role-registry .admin-role-table.admin-user-directory td {
+  min-width: 0 !important; max-width: none !important;
+  padding: .72rem .5rem; vertical-align: middle;
+  box-sizing: border-box; overflow-wrap: anywhere;
+}
+.admin-role-registry .admin-role-table.admin-user-directory th:nth-child(1),
+.admin-role-registry .admin-role-table.admin-user-directory td:nth-child(1) { width: 16% !important; }
+.admin-role-registry .admin-role-table.admin-user-directory th:nth-child(2),
+.admin-role-registry .admin-role-table.admin-user-directory td:nth-child(2) { width: 26% !important; }
+.admin-role-registry .admin-role-table.admin-user-directory th:nth-child(3),
+.admin-role-registry .admin-role-table.admin-user-directory td:nth-child(3) { width: 28% !important; }
+.admin-role-registry .admin-role-table.admin-user-directory th:nth-child(4),
+.admin-role-registry .admin-role-table.admin-user-directory td:nth-child(4) { width: 21% !important; }
+.admin-role-registry .admin-role-table.admin-user-directory th:nth-child(5),
+.admin-role-registry .admin-role-table.admin-user-directory td:nth-child(5) {
+  width: 9% !important; min-width: 0 !important;
+}
+.admin-role-registry .admin-role-table.admin-user-directory .admin-directory-name,
+.admin-role-registry .admin-role-table.admin-user-directory .admin-directory-email,
+.admin-role-registry .admin-role-table.admin-user-directory .admin-directory-server {
+  font-size: .88rem; white-space: normal !important; overflow-wrap: anywhere;
+}
+.admin-role-registry .admin-role-table.admin-user-directory .admin-directory-roles {
+  font-size: .89rem; line-height: 1.55; white-space: normal !important;
+}
+.admin-role-registry .admin-role-table.admin-user-directory .admin-directory-action .btn {
+  width: 100%; min-width: 0 !important; font-size: .84rem;
+  padding: .48rem .18rem; white-space: nowrap;
+}
+@media (max-width: 800px) {
+  .admin-role-registry { padding: 1rem .65rem; }
+  .admin-role-registry .admin-role-table.admin-user-directory { font-size: .79rem; }
+  .admin-role-registry .admin-role-table.admin-user-directory th,
+  .admin-role-registry .admin-role-table.admin-user-directory td { padding: .5rem .22rem; }
+  .admin-role-registry .admin-role-table.admin-user-directory .admin-directory-name,
+  .admin-role-registry .admin-role-table.admin-user-directory .admin-directory-email,
+  .admin-role-registry .admin-role-table.admin-user-directory .admin-directory-server,
+  .admin-role-registry .admin-role-table.admin-user-directory .admin-directory-roles { font-size: .76rem; }
+  .admin-role-registry .admin-role-table.admin-user-directory .admin-directory-action .btn {
+    font-size: .73rem; padding: .4rem .08rem;
+  }
+}
+/* /MOLBI_DECISION_PROOF_ONE_PAGE_V1 */

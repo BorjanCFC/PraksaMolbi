@@ -71,6 +71,18 @@
               </div>
 
               <div class="form-group">
+                <label for="assignStaffIme">Име</label>
+                <input id="assignStaffIme" name="ime" type="text" maxlength="100"
+                       placeholder="Борјан" autocomplete="given-name" required>
+              </div>
+
+              <div class="form-group">
+                <label for="assignStaffPrezime">Презиме</label>
+                <input id="assignStaffPrezime" name="prezime" type="text" maxlength="100"
+                       placeholder="Петревски" autocomplete="family-name" required>
+              </div>
+
+              <div class="form-group">
                 <label for="assignRole">Улога</label>
                 <select id="assignRole" name="role" class="form-select" required>
                   <option value="admin">Админ</option>
@@ -104,47 +116,33 @@
             <p class="admin-role-empty">Нема корисници со доделени административни улоги.</p>
           <% } else { %>
             <div class="admin-role-table-scroll">
-              <table class="admin-role-table">
-                <thead><tr><th>Email</th><th>Доделени улоги</th><th>Сервер</th><th>Акции</th></tr></thead>
+              <table class="admin-role-table admin-user-directory">
+                <thead>
+                  <tr>
+                    <th>Корисник</th>
+                    <th>Email</th>
+                    <th>Доделени улоги</th>
+                    <th>Сервер</th>
+                    <th>Акции</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <% adminAccounts.forEach((account) => { %>
                     <tr>
-                      <td><%= account.email %></td>
-                      <td><%= account.roles.map((role) => role.label).join(', ') %></td>
-                      <td><%= account.authServer === 'makedon' ? 'makedon.feit.ukim.edu.mk' : 'smail.feit.ukim.edu.mk' %></td>
-                      <td>
-                        <div class="admin-role-actions">
-                          <% const availableRoles = adminRoleOptions.filter((option) => !account.roles.some((role) => role.value === option.value)); %>
-                          <% if (availableRoles.length > 0) { %>
-                            <form action="/dashboard/assign-role" method="POST" class="admin-role-action-form">
-                              <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
-                              <input type="hidden" name="email" value="<%= account.email %>">
-                              <input type="hidden" name="authServer" value="<%= account.authServer %>">
-                              <label class="sr-only" for="role-add-<%= account.userId %>">Улога за додавање</label>
-                              <select id="role-add-<%= account.userId %>" name="role" class="form-select" required>
-                                <option value="" selected disabled>Изберете улога</option>
-                                <% availableRoles.forEach((option) => { %>
-                                  <option value="<%= option.value %>"><%= option.label %></option>
-                                <% }) %>
-                              </select>
-                              <button type="submit" class="btn btn-admin">Додај улога</button>
-                            </form>
-                          <% } else { %>
-                            <span class="admin-all-roles">Сите улоги се доделени</span>
-                          <% } %>
-                          <form action="/dashboard/users/<%= account.userId %>/remove-role" method="POST" class="admin-role-action-form" onsubmit="return confirm('Дали сте сигурни дека сакате да ги отстраните избраните улоги од овој корисник?');">
-                            <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
-                            <label class="sr-only" for="role-remove-<%= account.userId %>">Улога за отстранување</label>
-                            <select id="role-remove-<%= account.userId %>" name="role" class="form-select" required>
-                              <option value="" selected disabled>Изберете улога</option>
-                              <% account.roles.forEach((role) => { %>
-                                <option value="<%= role.value %>"><%= role.label %></option>
-                              <% }) %>
-                              <option value="all">Сите административни улоги</option>
-                            </select>
-                            <button type="submit" class="btn btn-danger">Отстрани улога</button>
-                          </form>
-                        </div>
+                      <td class="admin-directory-name">
+                        <%= account.ime && account.prezime
+                          ? convertNameToCyrillic(account.ime) + ' ' + convertNameToCyrillic(account.prezime) : '—' %>
+                      </td>
+                      <td class="admin-directory-email"><%= account.email %></td>
+                      <td class="admin-directory-roles">
+                        <% account.roles.forEach((role, index) => { %>
+                          <span class="admin-directory-role"><%= role.label %><%= index < account.roles.length - 1 ? ',' : '' %></span>
+                        <% }) %>
+                      </td>
+                      <td class="admin-directory-server"><%= account.authServer === 'makedon'
+                        ? 'makedon.feit.ukim.edu.mk' : 'smail.feit.ukim.edu.mk' %></td>
+                      <td class="admin-directory-action">
+                        <a class="btn btn-admin btn-small" href="/dashboard/admin-users/<%= account.userId %>">Детали</a>
                       </td>
                     </tr>
                   <% }) %>

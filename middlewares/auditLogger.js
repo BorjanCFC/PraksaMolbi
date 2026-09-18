@@ -33,7 +33,7 @@ module.exports = function auditLogger(req, res, next) {
     const role = user.role || user.roleLabel || '';
     const ip = (req.headers['x-forwarded-for'] || req.connection && req.connection.remoteAddress || req.ip || '').toString();
     const method = req.method;
-    const url = req.originalUrl || req.url || '';
+    const url = (req.originalUrl || req.url || '').split('?')[0]; // Never log OAuth codes or query secrets.
     const userAgent = req.headers['user-agent'] || '';
 
     const line = [timestamp, userId, email, role, ip, method, url, userAgent]

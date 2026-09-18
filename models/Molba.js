@@ -103,6 +103,22 @@ const Molba = sequelize.define('Molba', {
     field: 'sluzhba_feedback'
   },
 
+  // MOLBI_DECISION_PROOF_ONE_PAGE_V1
+  // Authoritative decision evidence: written when the vice-dean saves the decision.
+  decisionAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+    field: 'decision_at'
+  },
+  decisionByUserId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+    field: 'decision_by_user_id',
+    references: { model: 'users', key: 'userId' }
+  },
+
   prodekanFeedback: {
     type: DataTypes.TEXT,
     allowNull: true,

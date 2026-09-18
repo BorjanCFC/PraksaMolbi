@@ -392,6 +392,20 @@ const isCurrentAdminAuthorized = async (userId) => {
   return !!(await UserRole.findOne({ where: { userId, roleId: role.roleId } }));
 };
 
+// MOLBI_ADMIN_NAMES_DETAIL_V1
+// Existing users.ime and users.prezime: no migration or new columns.
+// Convert Latin-script administrative names on save; keep Cyrillic unchanged.
+const normalizeStaffName = (value) => {
+  const normalized = String(value || '').trim().replace(/\s+/g, ' ');
+  return /[A-Za-z]/.test(normalized)
+    ? convertNameToCyrillic(normalized)
+    : normalized;
+};
+const validStaffName = (value) => value.length <= 100 &&
+  /^[\p{L}\p{M}][\p{L}\p{M} .’'\-]*$/u.test(value);
+const validStaffNamePair = (ime, prezime) =>
+  !!ime && !!prezime && validStaffName(ime) && validStaffName(prezime);
+
 const newestFirstOrder = [
   ['createdAt', 'DESC'],
   ['molbaId', 'DESC']
@@ -592,11 +606,27 @@ const sanitizePdfText = (value) => {
 };
 
 
+// MOLBI_DECISION_PROOF_ONE_PAGE_V1
+// Format the persisted instant in Macedonian local time (including DST).
+const formatDecisionMoment = (value) => {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) {
+    throw new Error('Недостига валиден датум и час на одлуката.');
+  }
+  const pieces = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Skopje',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(date);
+  const p = Object.fromEntries(pieces.map((item) => [item.type, item.value]));
+  return { date: `${p.day}.${p.month}.${p.year}`, time: `${p.hour}:${p.minute}` };
+};
+
 /* =========================================================
    PDF GENERATION
 ========================================================= */
 
-const generateArchivePdfFile = async (molba) => {
+const generateArchivePdfFile = async (molba, decisionSigner) => {
   const nasoka =
     molba.student.smer ||
     (
@@ -727,6 +757,18 @@ const generateArchivePdfFile = async (molba) => {
     statusValue === 'Одбиена' &&
     feedbackValue !== '';
 
+  const approvedByName = [decisionSigner.ime, decisionSigner.prezime]
+    .map((part) => convertNameToCyrillic(sanitizePdfText(part)))
+    .join(' ').trim();
+  if (!approvedByName || !molba.decisionAt) {
+    throw new Error('Недостига продеканот или времето на одлуката.');
+  }
+  const decisionMoment = formatDecisionMoment(molba.decisionAt);
+  const verificationText =
+    `Овој документ е дигитално потврден од продеканот за настава на ` +
+    `Факултетот за електротехника и информациски технологии, ` +
+    `проф. д-р ${approvedByName} на ${decisionMoment.date} во ${decisionMoment.time}h.`;
+
   const studentLine = [
     studentName,
     indexValue,
@@ -745,6 +787,7 @@ const generateArchivePdfFile = async (molba) => {
       const doc =
         new PDFDocument({
           size: 'A4',
+          bufferPages: true,
 
           margins: {
             top: 56,
@@ -754,27 +797,14 @@ const generateArchivePdfFile = async (molba) => {
           }
         });
 
-      const stream =
-        fs.createWriteStream(
-          fullPath
-        );
-
-      stream.on(
-        'finish',
-        resolve
-      );
-
-      stream.on(
-        'error',
-        reject
-      );
-
-      doc.on(
-        'error',
-        reject
-      );
-
-      doc.pipe(stream);
+      const pdfChunks = [];
+      doc.on('data', (chunk) => pdfChunks.push(chunk));
+      doc.on('error', reject);
+      doc.on('end', () => {
+        fs.promises.writeFile(fullPath, Buffer.concat(pdfChunks))
+          .then(resolve)
+          .catch(reject);
+      });
 
 
       /* ===================================================
@@ -921,269 +951,152 @@ const generateArchivePdfFile = async (molba) => {
         );
 
 
-      doc
-        .font(boldFont)
-        .fontSize(13)
-        .text(
-          'Датум:',
-          72,
-          190,
-          {
-            continued: true
-          }
-        );
+      // MOLBI_SHARED_PDF_TOP_LAYOUT_V3
+      // The date and archive number use the same size as the application body.
+      // Draw the same heading in the sizing trial and in the finished PDF.
+      const renderApplicationTop = (target, size) => {
+        target.fillColor('#000000');
+        target.font(boldFont).fontSize(size)
+          .text('Датум:', 72, 184, { continued: true });
+        target.font(regularFont).fontSize(size)
+          .text(` ${submitDateValue}`);
 
+        target.font(boldFont).fontSize(size)
+          .text('Архивски број:', 350, 184, { continued: true });
+        target.font(regularFont).fontSize(size)
+          .text(` ${archiveNumberValue}`);
 
-      doc
-        .font(regularFont)
-        .fontSize(13)
-        .text(
-          ` ${submitDateValue}`
-        );
+        // Smaller document heading and a shorter gap before the first field.
+        target.font(boldFont).fontSize(16)
+          .text('Молба', 0, 229, { align: 'center' });
+      };
 
-
-      doc
-        .font(boldFont)
-        .fontSize(13)
-        .text(
-          'Архивски број:',
-          350,
-          190,
-          {
-            continued: true
-          }
-        );
-
-
-      doc
-        .font(regularFont)
-        .fontSize(13)
-        .text(
-          ` ${archiveNumberValue}`
-        );
-
-
-      doc
-        .font(boldFont)
-        .fontSize(18)
-        .text(
-          'Молба',
-          0,
-          245,
-          {
-            align: 'center'
-          }
-        );
-
-
-      let y = 315;
-
+      // MOLBI_SHARED_PDF_BODY_SIZE_V2
+      // The institutional header stays fixed. Date, archive number and
+      // all application labels and values use one shared font size.
+      // The slightly smaller heading "Молба" remains 16 pt.
       const leftX = 72;
       const contentWidth = 450;
-      const labelFontSize = 14;
-      const valueFontSize = 14;
+      const bodyText = descriptionValue || '-';
 
+      // PDFKit works in points, so this is 0.5 pt larger than the old 8.8 pt.
+      const footerFontSize = 9.3;
+      const footerLineGap = 2;
+      doc.font(regularFont).fontSize(footerFontSize);
+      const footerHeight = doc.heightOfString(verificationText, {
+        width: contentWidth, align: 'center', lineGap: footerLineGap
+      });
+      const verificationY = doc.page.height - 62 - footerHeight;
+      // Reserve space for the separator and a visible gap above the footer.
+      const bodyLimitY = verificationY - 24;
 
-      doc
-        .font(boldFont)
-        .fontSize(
-          labelFontSize
-        )
-        .text(
-          'Наслов на молбата:',
-          leftX,
-          y,
-          {
-            continued: true
-          }
-        );
+      const renderApplicationBody = (target, size) => {
+        const lineGap = size >= 12 ? 2.5 : 1.5;
+        const rowGap = size >= 13 ? 12 : (size >= 12 ? 9 : 7);
+        const descriptionGap = size >= 13 ? 16 : 11;
+        const statusGap = size >= 13 ? 17 : 12;
+        const feedbackGap = size >= 13 ? 17 : 12;
+        let currentY = 283;
 
+        // Identical rendering function for the dry run and the actual PDF:
+        // bold label and normal value, but the SAME point size everywhere.
+        const field = (label, value) => {
+          target.fillColor('#000000').font(boldFont).fontSize(size)
+            .text(label, leftX, currentY, {
+              continued: true, width: contentWidth, lineGap
+            });
+          target.font(regularFont).fontSize(size)
+            .text(` ${value}`, { width: contentWidth, lineGap });
+          currentY = target.y;
+        };
 
-      doc
-        .font(regularFont)
-        .fontSize(
-          valueFontSize
-        )
-        .text(
-          ` ${titleValue}`,
-          {
-            width:
-              contentWidth,
+        field('Наслов на молбата:', titleValue);
+        currentY += rowGap;
+        field('Студент:', studentLine);
+        currentY += rowGap;
+        field('Семестар и учебна година:',
+          `${semesterValue} ${academicYearValue}` +
+          (molba.ciklus ? ` / ${molba.ciklus} циклус` : ''));
 
-            lineGap:
-              3
-          }
-        );
+        currentY += descriptionGap;
+        target.font(boldFont).fontSize(size)
+          .text('Опис на молбата:', leftX, currentY, {
+            width: contentWidth, lineGap
+          });
+        currentY = target.y + 4;
+        target.font(regularFont).fontSize(size)
+          .text(bodyText, leftX, currentY, {
+            width: contentWidth, lineGap
+          });
 
+        currentY = target.y + statusGap;
+        field('Статус:', statusValue);
 
-      y =
-        doc.y + 14;
+        if (shouldRenderFeedback) {
+          currentY += feedbackGap;
+          target.font(boldFont).fontSize(size)
+            .text('Повратна информација:', leftX, currentY, {
+              width: contentWidth, lineGap
+            });
+          currentY = target.y + 4;
+          target.font(regularFont).fontSize(size)
+            .text(feedbackValue, leftX, currentY, {
+              width: contentWidth, lineGap
+            });
+          currentY = target.y;
+        }
 
+        return currentY;
+      };
 
-      doc
-        .font(boldFont)
-        .fontSize(
-          labelFontSize
-        )
-        .text(
-          'Студент:',
-          leftX,
-          y,
-          {
-            continued: true
-          }
-        );
+      // Measure with the same PDFKit engine, fonts and drawing calls used for
+      // the finished document. Never shrink just the description to tiny text.
+      let sharedFontSize = null;
+      for (let quarterPoints = 56; quarterPoints >= 44; quarterPoints--) {
+        const candidate = quarterPoints / 4; // 14 -> 11 pt, step 0.25 pt.
+        const measurement = new PDFDocument({
+          size: 'A4', bufferPages: true,
+          margins: { top: 56, left: 56, right: 56, bottom: 56 }
+        });
+        measurement.on('data', () => {});
+        measurement.on('error', () => {});
+        measurement.registerFont(regularFont, cyrillicFonts.regular);
+        measurement.registerFont(boldFont, cyrillicFonts.bold);
 
+        renderApplicationTop(measurement, candidate);
+        const measuredBottom = renderApplicationBody(measurement, candidate);
+        const onePage = measurement.bufferedPageRange().count === 1;
+        measurement.end();
 
-      doc
-        .font(regularFont)
-        .fontSize(
-          valueFontSize
-        )
-        .text(
-          ` ${studentLine}`,
-          {
-            width:
-              contentWidth,
-
-            lineGap:
-              3
-          }
-        );
-
-
-      y =
-        doc.y + 14;
-
-
-      doc
-        .font(boldFont)
-        .fontSize(
-          labelFontSize
-        )
-        .text(
-          'Семестар и учебна година:',
-          leftX,
-          y,
-          {
-            continued: true
-          }
-        );
-
-
-      doc
-        .font(regularFont)
-        .fontSize(
-          valueFontSize
-        )
-        .text(
-          ` ${semesterValue} ${academicYearValue}${molba.ciklus ? ' / ' + molba.ciklus + ' циклус' : ''}`,
-          {
-            width:
-              contentWidth,
-
-            lineGap:
-              3
-          }
-        );
-
-
-      y =
-        doc.y + 18;
-
-
-      doc
-        .font(boldFont)
-        .fontSize(
-          labelFontSize
-        )
-        .text(
-          'Опис на молбата:',
-          leftX,
-          y,
-          {
-            continued: true
-          }
-        );
-
-
-      doc
-        .font(regularFont)
-        .fontSize(
-          valueFontSize
-        )
-        .text(
-          ` ${
-            descriptionValue ||
-            '-'
-          }`,
-          {
-            width:
-              contentWidth,
-
-            lineGap:
-              4
-          }
-        );
-
-
-      const footerY =
-        doc.y + 35;
-
-
-      doc
-        .font(boldFont)
-        .fontSize(
-          labelFontSize
-        )
-        .text(
-          'Статус:',
-          leftX,
-          footerY,
-          {
-            continued: true
-          }
-        );
-
-
-      doc
-        .font(regularFont)
-        .fontSize(
-          valueFontSize
-        )
-        .text(
-          ` ${statusValue}`
-        );
-
-
-      if (
-        shouldRenderFeedback
-      ) {
-        doc
-          .font(boldFont)
-          .fontSize(17)
-          .text(
-            'Повратна информација:',
-            72,
-            footerY + 36,
-            {
-              continued: true
-            }
-          );
-
-        doc
-          .font(regularFont)
-          .fontSize(17)
-          .text(
-            ` ${feedbackValue}`,
-            {
-              width: 450,
-              lineGap: 3
-            }
-          );
+        if (onePage && measuredBottom <= bodyLimitY) {
+          sharedFontSize = candidate;
+          break;
+        }
       }
 
+      if (sharedFontSize === null) {
+        throw new Error('Текстот е предолг за читлив PDF на една страница ' +
+          '(минимум 11 pt за сите полиња). Скратете го описот или повратната информација.');
+      }
 
+      // Draw exactly the same body that passed the one-page dry run.
+      renderApplicationTop(doc, sharedFontSize);
+      const actualBottom = renderApplicationBody(doc, sharedFontSize);
+      if (doc.bufferedPageRange().count !== 1 || actualBottom > bodyLimitY) {
+        throw new Error('PDF содржината не собира на една страница без преклопување.');
+      }
+
+      // The confirmation is fixed to the physical bottom, as before.
+      doc.strokeColor('#b2bdca').lineWidth(0.5)
+        .moveTo(leftX, verificationY - 10)
+        .lineTo(leftX + contentWidth, verificationY - 10).stroke();
+      doc.fillColor('#242b33').font(regularFont).fontSize(footerFontSize)
+        .text(verificationText, leftX, verificationY, {
+          width: contentWidth, align: 'center', lineGap: footerLineGap
+        });
+      if (doc.bufferedPageRange().count !== 1) {
+        throw new Error('PDF потврдата зафати повеќе од една страница.');
+      }
       doc.end();
     }
   );
@@ -2142,6 +2055,8 @@ exports.getDashboard = async (
       adminAccounts = users.map((account) => ({
         userId: account.userId,
         email: account.email,
+        ime: account.ime || '',
+        prezime: account.prezime || '',
         authServer: account.authServer || 'makedon',
         roles: account.roles.map((role) => {
           const value = staffRoleValueByTip[role.tip];
@@ -2280,6 +2195,99 @@ exports.getDashboard = async (
 };
 
 /* =========================================================
+   GET /dashboard/admin-users/:id - staff account details
+========================================================= */
+exports.getAdminUserDetail = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+  if (actor.role !== ROLE.ADMIN || !(await isCurrentAdminAuthorized(actor.userId))) {
+    return res.status(403).send('Само администратор има пристап до овој преглед.');
+  }
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).send('Невалиден корисник.');
+  }
+  try {
+    const target = await User.findByPk(id, {
+      include: [{ model: Role, as: 'roles',
+        where: { tip: { [Op.in]: Object.values(roleTipByRole) } },
+        required: true, through: { attributes: [] } }]
+    });
+    if (!target) return res.status(404).send('Административниот корисник не е пронајден.');
+    const roles = target.roles.map((r) => {
+      const value = staffRoleValueByTip[r.tip];
+      return value ? { value, label: getRoleLabel(value) } : null;
+    }).filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
+
+    return res.render('detail-admin', {
+      title: 'Детали за административен корисник',
+      viewer: actor,
+      isImpersonating: false,
+      convertNameToCyrillic,
+      getRoleLabel,
+      account: {
+        userId: target.userId,
+        email: target.email,
+        ime: target.ime || '',
+        prezime: target.prezime || '',
+        authServer: target.authServer || 'makedon',
+        roles
+      },
+      adminRoleOptions,
+      adminCsrfToken: ensureAdminRoleCsrf(req),
+      success: req.flash('success'),
+      error: req.flash('error')
+    });
+  } catch (error) {
+    console.error('Admin detail error:', error);
+    return res.status(500).send('Неуспешно вчитување на корисникот.');
+  }
+};
+
+/* =========================================================
+   POST /dashboard/admin-users/:id/name - edit existing User names
+========================================================= */
+exports.updateAdminUserName = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+  if (actor.role !== ROLE.ADMIN || !(await isCurrentAdminAuthorized(actor.userId))) {
+    return res.status(403).send('Само администратор може да менува имиња.');
+  }
+  if (!validAdminRoleCsrf(req)) {
+    return res.status(403).send('Невалидна сесија. Освежете ја страницата.');
+  }
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).send('Невалиден корисник.');
+  }
+  const ime = normalizeStaffName(req.body.ime);
+  const prezime = normalizeStaffName(req.body.prezime);
+  if (!validStaffNamePair(ime, prezime)) {
+    req.flash('error', 'Внесете валидно име и презиме. Двете полиња се задолжителни.');
+    return res.redirect(`/dashboard/admin-users/${id}`);
+  }
+  try {
+    const target = await User.findByPk(id, {
+      include: [{ model: Role, as: 'roles',
+        where: { tip: { [Op.in]: Object.values(roleTipByRole) } },
+        required: true, through: { attributes: [] } }]
+    });
+    if (!target) return res.status(404).send('Административниот корисник не е пронајден.');
+    await target.update({ ime, prezime });
+    if (id === actor.userId) {
+      req.session.user.ime = ime;
+      req.session.user.prezime = prezime;
+    }
+    req.flash('success', 'Името и презимето се успешно зачувани.');
+    return res.redirect(`/dashboard/admin-users/${id}`);
+  } catch (error) {
+    console.error('Admin name update error:', error);
+    req.flash('error', 'Неуспешно зачувување на името и презимето.');
+    return res.redirect(`/dashboard/admin-users/${id}`);
+  }
+};
+
+/* =========================================================
    POST /dashboard/assign-role
 ========================================================= */
 
@@ -2311,6 +2319,10 @@ exports.assignRoleByEmail =
     }
 
 
+    const requestedDetailId = Number(req.body.adminDetailUserId);
+    const fromDetails = Number.isSafeInteger(requestedDetailId) && requestedDetailId > 0;
+    const returnPath = fromDetails ? `/dashboard/admin-users/${requestedDetailId}` : '/dashboard';
+
     try {
       if (!validAdminRoleCsrf(req)) {
         return res.status(403).send('Невалидна сесија за промена на улоги. Освежете ја страницата.');
@@ -2318,6 +2330,14 @@ exports.assignRoleByEmail =
       if (!(await isCurrentAdminAuthorized(user.userId))) {
         return res.status(403).send('Администраторската улога повеќе не е активна.');
       }
+      const ime = normalizeStaffName(req.body.ime);
+      const prezime = normalizeStaffName(req.body.prezime);
+      // The detail-page role form does not submit names: it only adds a role.
+      if (!fromDetails && !validStaffNamePair(ime, prezime)) {
+        req.flash('error', 'Внесете валидно име и презиме за административниот корисник.');
+        return res.redirect(returnPath);
+      }
+
       const email =
         normalizeEmail(
           req.body.email
@@ -2357,9 +2377,7 @@ exports.assignRoleByEmail =
           'Избран е невалиден mail server.'
         );
 
-        return res.redirect(
-          '/dashboard'
-        );
+        return res.redirect(returnPath);
       }
 
 
@@ -2374,9 +2392,7 @@ exports.assignRoleByEmail =
           'Внесете валиден email.'
         );
 
-        return res.redirect(
-          '/dashboard'
-        );
+        return res.redirect(returnPath);
       }
 
 
@@ -2390,9 +2406,7 @@ exports.assignRoleByEmail =
           'За административни улоги дозволени се само FEIT email адреси.'
         );
 
-        return res.redirect(
-          '/dashboard'
-        );
+        return res.redirect(returnPath);
       }
 
 
@@ -2406,9 +2420,7 @@ exports.assignRoleByEmail =
           'Избраната улога не е валидна за доделување.'
         );
 
-        return res.redirect(
-          '/dashboard'
-        );
+        return res.redirect(returnPath);
       }
 
 
@@ -2433,9 +2445,7 @@ exports.assignRoleByEmail =
           'Бараната улога не постои во базата.'
         );
 
-        return res.redirect(
-          '/dashboard'
-        );
+        return res.redirect(returnPath);
       }
 
 
@@ -2470,6 +2480,9 @@ exports.assignRoleByEmail =
                EXISTING USER
             ============================================= */
 
+            if (fromDetails && (!targetUser || targetUser.userId !== requestedDetailId)) {
+              throw new Error('Несовпаѓање меѓу email и избраниот корисник.');
+            }
             if (targetUser) {
               const existingAssignment =
                 await UserRole.findOne({
@@ -2519,6 +2532,12 @@ exports.assignRoleByEmail =
               }
 
 
+              // An explicit main-form assignment also updates the existing name.
+              // A detail-page role assignment keeps the stored name unchanged.
+              if (!fromDetails && (targetUser.ime !== ime || targetUser.prezime !== prezime)) {
+                await targetUser.update({ ime, prezime }, { transaction });
+              }
+
               await UserRole.create(
                 {
                   userId:
@@ -2549,10 +2568,11 @@ exports.assignRoleByEmail =
                NEW STAFF USER
             ============================================= */
 
-            const nameParts =
-              deriveNameFromEmail(
-                email
-              );
+            // Use the manually provided name in the existing users.ime/prezime fields.
+            if (!validStaffNamePair(ime, prezime)) {
+              throw new Error('Внесете име и презиме за новиот административен корисник.');
+            }
+            const nameParts = { ime, prezime };
 
 
             targetUser =
@@ -2619,9 +2639,7 @@ exports.assignRoleByEmail =
           `Корисникот ${email} веќе ја има доделено улогата „${getRoleLabel(role)}“.`
         );
 
-        return res.redirect(
-          '/dashboard'
-        );
+        return res.redirect(returnPath);
       }
 
 
@@ -2631,9 +2649,7 @@ exports.assignRoleByEmail =
       );
 
 
-      return res.redirect(
-        '/dashboard'
-      );
+      return res.redirect(returnPath);
 
     } catch (error) {
       console.error(
@@ -2652,9 +2668,7 @@ exports.assignRoleByEmail =
           'Корисникот веќе ја има оваа улога.'
         );
 
-        return res.redirect(
-          '/dashboard'
-        );
+        return res.redirect(returnPath);
       }
 
 
@@ -2663,9 +2677,7 @@ exports.assignRoleByEmail =
         'Настана грешка при доделување улога.'
       );
 
-      return res.redirect(
-        '/dashboard'
-      );
+      return res.redirect(returnPath);
     }
   };
 
@@ -2873,11 +2885,16 @@ exports.removeRoleFromUser = async (req, res) => {
       await UserRole.destroy({
         where: { userId: targetId, roleId: { [Op.in]: selectedIds } }, transaction
       });
-      return { email: target.email, count: selectedIds.length };
+      const remaining = await UserRole.count({
+        where: { userId: targetId, roleId: { [Op.in]: roleDefs.map((r) => r.roleId) } },
+        transaction
+      });
+      return { email: target.email, count: selectedIds.length, remaining };
     });
 
     req.flash('success', `Отстранети се ${removed.count} улога/улоги од ${removed.email}.`);
-    return res.redirect('/dashboard');
+    return res.redirect(removed.remaining > 0
+      ? `/dashboard/admin-users/${targetId}` : '/dashboard');
   } catch (error) {
     console.error('Remove role error:', error);
     req.flash('error', error.message || 'Неуспешно отстранување на улога.');
@@ -3763,6 +3780,20 @@ exports.generateMolbaPdf =
       }
 
 
+      // Do not guess a historic decision time from an HTTP request log.
+      if (!molba.decisionAt || !molba.decisionByUserId) {
+        req.flash('error', 'Недостига запишан датум/час или автор на одлуката. '
+          + 'Не може да се генерира потврда со измислени податоци.');
+        return res.redirect('/dashboard');
+      }
+      const decisionSigner = await User.findByPk(molba.decisionByUserId, {
+        attributes: ['ime', 'prezime']
+      });
+      if (!decisionSigner || !decisionSigner.ime || !decisionSigner.prezime) {
+        req.flash('error', 'Не е пронајдено име и презиме на продеканот што ја донел одлуката.');
+        return res.redirect('/dashboard');
+      }
+
       /*
        * Ako postoi star PDF, go regenerirame.
        */
@@ -3826,7 +3857,8 @@ exports.generateMolbaPdf =
        */
       molba.arhivaPdfPath =
         await generateArchivePdfFile(
-          molba
+          molba,
+          decisionSigner
         );
 
 
@@ -3907,7 +3939,9 @@ exports.generateMolbaPdf =
 
       req.flash(
         'error',
-        'Настана грешка при генерирање на PDF документот.'
+        /предолг|повеќе од една страница/.test(error.message || '')
+          ? error.message
+          : 'Настана грешка при генерирање на PDF документот.'
       );
 
 
@@ -4055,6 +4089,9 @@ exports.updateStatus =
       molba.workflowStage =
         WORKFLOW_STAGE.DECIDED;
 
+      // The source of truth is the successful decision action, not audit.csv.
+      molba.decisionAt = new Date();
+      molba.decisionByUserId = user.userId;
 
       await molba.save();
 

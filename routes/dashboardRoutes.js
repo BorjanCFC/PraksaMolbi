@@ -3,7 +3,7 @@ const router = express.Router();
 const molbiController = require('../controllers/molbiController');
 const { studentPdfUpload } = require('../middlewares/upload');
 // Verify staff role membership against DB to revoke removed permissions immediately.
-const { Role, UserRole } = require('../models');
+const { Role, UserRole, User } = require('../models');
 const staffTipByRole = {
   admin: 'Admin',
   studentska_sluzhba: 'Sluzhba',
@@ -20,7 +20,16 @@ router.use('/dashboard', async (req, res, next) => {
     const assignment = role && await UserRole.findOne({
       where: { userId: user.userId, roleId: role.roleId }
     });
-    if (assignment) return next();
+    if (assignment) {
+      // Refresh names in the header immediately, including when another admin edited them.
+      const account = await User.findByPk(user.userId, {
+        attributes: ['ime', 'prezime']
+      });
+      if (!account) return res.status(403).send('Корисникот не постои.');
+      req.session.user.ime = account.ime || '';
+      req.session.user.prezime = account.prezime || '';
+      return next();
+    }
     return req.session.destroy((error) => {
       if (error) return next(error);
       res.clearCookie('connect.sid');
@@ -33,6 +42,8 @@ router.use('/dashboard', async (req, res, next) => {
 
 
 router.get('/dashboard', molbiController.getDashboard);
+router.get('/dashboard/admin-users/:id', molbiController.getAdminUserDetail);
+router.post('/dashboard/admin-users/:id/name', molbiController.updateAdminUserName);
 router.post('/dashboard/assign-role', molbiController.assignRoleByEmail);
 router.post('/dashboard/users/:id/remove-role', molbiController.removeRoleFromUser);
 router.get('/dashboard/nova-molba', molbiController.getNovaMolba);

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Детали за административен корисник — MOLBI</title>
+  <link rel="icon" href="/images/feitLogoBrowser.png" type="image/png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header', { viewer, isImpersonating }) %>
+  <main class="container admin-account-detail">
+    <a href="/dashboard" class="btn btn-secondary admin-detail-back">← Назад</a>
+
+    <% if (success && success.length) { %><div class="alert alert-success"><%= success %></div><% } %>
+    <% if (error && error.length) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <section class="admin-detail-card">
+      <div class="admin-detail-heading">
+        <div>
+          <h2>Детали за административен корисник</h2>
+          <p class="subtitle"><%= account.email %></p>
+        </div>
+        <span class="admin-detail-tag">ФЕИТ</span>
+      </div>
+      <div class="admin-detail-info">
+        <div><strong>Корисник</strong><span><%= account.ime && account.prezime ? convertNameToCyrillic(account.ime) + ' ' + convertNameToCyrillic(account.prezime) : 'Не е внесено име и презиме' %></span></div>
+        <div><strong>Доделени улоги</strong><span><%= account.roles.map((role) => role.label).join(', ') %></span></div>
+        <div><strong>Mail server</strong><span><%= account.authServer === 'makedon' ? 'makedon.feit.ukim.edu.mk' : 'smail.feit.ukim.edu.mk' %></span></div>
+      </div>
+    </section>
+
+    <section class="admin-detail-card">
+      <h3>Име и презиме</h3>
+      <form action="/dashboard/admin-users/<%= account.userId %>/name" method="POST">
+        <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
+        <div class="admin-detail-name-grid">
+          <div class="form-group">
+            <label for="detailStaffIme">Име</label>
+            <input id="detailStaffIme" type="text" name="ime" maxlength="100" required placeholder="Борјан" value="<%= convertNameToCyrillic(account.ime) %>" autocomplete="given-name">
+          </div>
+          <div class="form-group">
+            <label for="detailStaffPrezime">Презиме</label>
+            <input id="detailStaffPrezime" type="text" name="prezime" maxlength="100" required placeholder="Петревски" value="<%= convertNameToCyrillic(account.prezime) %>" autocomplete="family-name">
+          </div>
+        </div>
+        <div class="admin-detail-footer"><button class="btn btn-admin" type="submit">Зачувај промени</button></div>
+      </form>
+    </section>
+
+    <section class="admin-detail-card">
+      <h3>Додај улога</h3>
+      <p class="subtitle">Новата улога ќе се додаде без замена на постојните.</p>
+      <% const availableRoles = adminRoleOptions.filter((option) => !account.roles.some((role) => role.value === option.value)); %>
+      <% if (availableRoles.length === 0) { %>
+        <p class="admin-detail-muted">Сите административни улоги веќе се доделени.</p>
+      <% } else { %>
+        <form action="/dashboard/assign-role" method="POST" class="admin-detail-action-form">
+          <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
+          <input type="hidden" name="adminDetailUserId" value="<%= account.userId %>">
+          <input type="hidden" name="email" value="<%= account.email %>">
+          <input type="hidden" name="authServer" value="<%= account.authServer %>">
+          <label class="sr-only" for="detailAddRole">Изберете улога за додавање</label>
+          <select id="detailAddRole" name="role" class="form-select" required>
+            <option value="" selected disabled>Изберете улога</option>
+            <% availableRoles.forEach((option) => { %><option value="<%= option.value %>"><%= option.label %></option><% }) %>
+          </select>
+          <button class="btn btn-admin" type="submit">Додај улога</button>
+        </form>
+      <% } %>
+    </section>
+
+    <section class="admin-detail-card">
+      <h3>Отстрани улога</h3>
+      <p class="subtitle">Можете да отстраните конкретна улога или сите административни улоги.</p>
+      <form action="/dashboard/users/<%= account.userId %>/remove-role" method="POST" class="admin-detail-action-form" onsubmit="return confirm('Дали сте сигурни дека сакате да ги отстраните избраните улоги?');">
+        <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
+        <label class="sr-only" for="detailRemoveRole">Изберете улога за отстранување</label>
+        <select id="detailRemoveRole" name="role" class="form-select" required>
+          <option value="" selected disabled>Изберете улога</option>
+          <% account.roles.forEach((role) => { %><option value="<%= role.value %>"><%= role.label %></option><% }) %>
+          <option value="all">Сите административни улоги</option>
+        </select>
+        <button class="btn btn-danger" type="submit">Отстрани улога</button>
+      </form>
+    </section>
+    <div class="admin-detail-bottom-nav">
+      <a href="/dashboard" class="btn btn-secondary admin-detail-back">← Назад</a>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+</body>
+</html>

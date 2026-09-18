@@ -19,6 +19,15 @@
           <% const isStaffRole = viewer.role === 'arhiva' || viewer.role === 'prodekan' || viewer.role === 'admin' || viewer.role === 'studentska_sluzhba'; %>
           <span class="nav-user">
             <% if (isStaffRole) { %>
+              <% const emailNameParts = String(viewer.email || '').split('@')[0].split(/[._-]+/).filter(Boolean); %>
+              <% const derivedIme = emailNameParts[0] || 'Корисник'; %>
+              <% const derivedPrezime = emailNameParts.slice(1).join(' ') || 'Профил'; %>
+              <% const derivedPlaceholder =
+                    String(viewer.ime || '').toLocaleLowerCase() === derivedIme.toLocaleLowerCase() &&
+                    String(viewer.prezime || '').toLocaleLowerCase() === derivedPrezime.toLocaleLowerCase(); %>
+              <% if (viewer.ime && viewer.prezime && !derivedPlaceholder) { %>
+                <%= convertNameToCyrillic(viewer.ime) %> <%= convertNameToCyrillic(viewer.prezime) %>
+              <% } %>
               <%= displayRoleLabel %>
             <% } else { %>
               <%= convertNameToCyrillic(viewer.ime) %> <%= convertNameToCyrillic(viewer.prezime) %>
