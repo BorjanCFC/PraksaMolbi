@@ -959,7 +959,8 @@ const formatDecisionDateTimeMk = (
 
 
 const generateArchivePdfFile = async (
-  molba
+  molba,
+  decisionSigner = null
 ) => {
   const nasoka =
     molba.student.smer ||
@@ -993,28 +994,16 @@ const generateArchivePdfFile = async (
       molba.student.ime || ''
     )
       .trim()
-      .replace(
-        /\s+/g,
-        ''
-      )
-      .replace(
-        /[^\p{L}\p{N}]/gu,
-        ''
-      );
+      .replace(/\s+/g, '')
+      .replace(/[^\p{L}\p{N}]/gu, '');
 
   const safePrezime =
     String(
       molba.student.prezime || ''
     )
       .trim()
-      .replace(
-        /\s+/g,
-        ''
-      )
-      .replace(
-        /[^\p{L}\p{N}]/gu,
-        ''
-      );
+      .replace(/\s+/g, '')
+      .replace(/[^\p{L}\p{N}]/gu, '');
 
   const fileName =
     `Molbi-${molba.molbaId}-${safeIme}${safePrezime}.pdf`;
@@ -1110,53 +1099,69 @@ const generateArchivePdfFile = async (
       .filter(Boolean)
       .join(' ');
 
-  const prodekanIdentity =
-    await getPdfProdekanIdentity();
-
   /*
-   * For the generated PDF use the timestamp of the
-   * actual POST /status action from audit.csv first.
-   * decisionAt is kept as a DB fallback for older
-   * records or when the audit row is unavailable.
+   * The proof text MUST use the actual user who made the decision
+   * and the decision timestamp stored in the database.
    */
-  let decisionTimestamp =
-    getDecisionTimestampFromAuditCsv(
-      molba
-    );
+  let resolvedDecisionSigner =
+    decisionSigner;
 
   if (
-    !decisionTimestamp
+    !resolvedDecisionSigner &&
+    molba.decisionByUserId
   ) {
-    decisionTimestamp =
-      molba.decisionAt
-        ? new Date(
-            molba.decisionAt
-          )
-        : null;
+    resolvedDecisionSigner =
+      await User.findByPk(
+        molba.decisionByUserId,
+        {
+          attributes: [
+            'ime',
+            'prezime'
+          ]
+        }
+      );
   }
+
+  if (
+    !resolvedDecisionSigner ||
+    !resolvedDecisionSigner.ime ||
+    !resolvedDecisionSigner.prezime
+  ) {
+    throw new Error(
+      'Не е пронајдено име и презиме на продеканот што ја донел одлуката.'
+    );
+  }
+
+  if (!molba.decisionAt) {
+    throw new Error(
+      'Недостига датум/час на одлуката во базата.'
+    );
+  }
+
+  const prodekanFullName =
+    `${convertNameToCyrillic(resolvedDecisionSigner.ime || '')} ${convertNameToCyrillic(resolvedDecisionSigner.prezime || '')}`.trim();
 
   const decisionDateTime =
     formatDecisionDateTimeMk(
-      decisionTimestamp
+      molba.decisionAt
     );
-
-  const prodekanFullName =
-    [
-      prodekanIdentity.ime,
-      prodekanIdentity.prezime
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .trim() ||
-    'Продекан';
 
   const confirmationText =
     `Овој документ е дигитално потврден од продеканот за настава на Факултетот за електротехника и информациски технологии, проф. д-р ${prodekanFullName} на ${decisionDateTime.date} во ${decisionDateTime.time}.`;
 
+  /*
+   * Fixed sizes:
+   * - university/faculty header stays unchanged;
+   * - date/archive line stays unchanged;
+   * - "Молба" stays unchanged.
+   * Only the content from "Наслов на молбата:" downward is adaptive.
+   */
   const BASE_BODY_FONT_SIZE = 14;
   const MIN_BODY_FONT_SIZE = 11;
   const BODY_FONT_STEP = 0.25;
-  const CONFIRMATION_FONT_SIZE = 9.3;
+
+  /* Requested +0.5 pt compared with the previous confirmation size. */
+  const CONFIRMATION_FONT_SIZE = 9.8;
 
   const margins = {
     top: 56,
@@ -1169,10 +1174,25 @@ const generateArchivePdfFile = async (
   const contentWidth = 450;
   const bodyStartY = 283;
 
+  const getBodyLineGap = (
+    baseGap,
+    bodyFontSize
+  ) => {
+    const scale =
+      bodyFontSize /
+      BASE_BODY_FONT_SIZE;
+
+    return Math.max(
+      0.6,
+      Number(
+        (baseGap * scale).toFixed(2)
+      )
+    );
+  };
+
   const buildPdf = async (
     bodyFontSize,
-    includeConfirmation,
-    multiPageMode
+    includeConfirmation
   ) => {
     let pageCount = 1;
     const chunks = [];
@@ -1234,12 +1254,8 @@ const generateArchivePdfFile = async (
           const cyrillicFonts =
             fontCandidates.find(
               (fontSet) =>
-                fs.existsSync(
-                  fontSet.regular
-                ) &&
-                fs.existsSync(
-                  fontSet.bold
-                )
+                fs.existsSync(fontSet.regular) &&
+                fs.existsSync(fontSet.bold)
             );
 
           if (!cyrillicFonts) {
@@ -1281,9 +1297,7 @@ const generateArchivePdfFile = async (
             );
 
           if (
-            fs.existsSync(
-              ukimLogoPath
-            )
+            fs.existsSync(ukimLogoPath)
           ) {
             doc.image(
               ukimLogoPath,
@@ -1294,18 +1308,14 @@ const generateArchivePdfFile = async (
                   68,
                   68
                 ],
-                align:
-                  'left',
-                valign:
-                  'top'
+                align: 'left',
+                valign: 'top'
               }
             );
           }
 
           if (
-            fs.existsSync(
-              feitRightLogoPath
-            )
+            fs.existsSync(feitRightLogoPath)
           ) {
             doc.image(
               feitRightLogoPath,
@@ -1316,17 +1326,13 @@ const generateArchivePdfFile = async (
                   64,
                   64
                 ],
-                align:
-                  'right',
-                valign:
-                  'top'
+                align: 'right',
+                valign: 'top'
               }
             );
           }
 
-          doc.fillColor(
-            '#000000'
-          );
+          doc.fillColor('#000000');
 
           const headerX = 100;
           const headerWidth = 395;
@@ -1339,12 +1345,9 @@ const generateArchivePdfFile = async (
               headerX,
               58,
               {
-                width:
-                  headerWidth,
-                align:
-                  'center',
-                lineBreak:
-                  false
+                width: headerWidth,
+                align: 'center',
+                lineBreak: false
               }
             );
 
@@ -1356,10 +1359,8 @@ const generateArchivePdfFile = async (
               headerX,
               86,
               {
-                width:
-                  headerWidth,
-                align:
-                  'center'
+                width: headerWidth,
+                align: 'center'
               }
             );
 
@@ -1371,61 +1372,51 @@ const generateArchivePdfFile = async (
               headerX,
               108,
               {
-                width:
-                  headerWidth,
-                align:
-                  'center'
+                width: headerWidth,
+                align: 'center'
               }
             );
 
+          /* Fixed metadata size — do NOT shrink this part. */
           doc
             .font(boldFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(BASE_BODY_FONT_SIZE)
             .text(
               'Датум:',
               72,
               170,
               {
-                continued:
-                  true
+                continued: true
               }
             );
 
           doc
             .font(regularFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(BASE_BODY_FONT_SIZE)
             .text(
               ` ${submitDateValue}`
             );
 
           doc
             .font(boldFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(BASE_BODY_FONT_SIZE)
             .text(
               'Архивски број:',
               350,
               170,
               {
-                continued:
-                  true
+                continued: true
               }
             );
 
           doc
             .font(regularFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(BASE_BODY_FONT_SIZE)
             .text(
               ` ${archiveNumberValue}`
             );
 
+          /* Fixed title size. */
           doc
             .font(boldFont)
             .fontSize(16)
@@ -1434,155 +1425,133 @@ const generateArchivePdfFile = async (
               0,
               225,
               {
-                align:
-                  'center'
+                align: 'center'
               }
             );
 
-          let y =
-            bodyStartY;
+          let y = bodyStartY;
 
+          /* From here downward only this body font is adaptive. */
           doc
             .font(boldFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               'Наслов на молбата:',
               leftX,
               y,
               {
-                continued:
-                  true
+                continued: true
               }
             );
 
           doc
             .font(regularFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               ` ${titleValue}`,
               {
-                width:
-                  contentWidth,
-                lineGap:
-                  3
+                width: contentWidth,
+                lineGap: getBodyLineGap(3, bodyFontSize)
               }
             );
 
-          y =
-            doc.y + 10;
+          y = doc.y + 10;
 
           doc
             .font(boldFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               'Студент:',
               leftX,
               y,
               {
-                continued:
-                  true
+                continued: true
               }
             );
 
           doc
             .font(regularFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               ` ${studentLine}`,
               {
-                width:
-                  contentWidth,
-                lineGap:
-                  3
+                width: contentWidth,
+                lineGap: getBodyLineGap(3, bodyFontSize)
               }
             );
 
-          y =
-            doc.y + 10;
+          y = doc.y + 10;
 
           doc
             .font(boldFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               'Семестар и учебна година:',
               leftX,
               y,
               {
-                continued:
-                  true
+                continued: true
               }
             );
 
           doc
             .font(regularFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               ` ${semesterValue} ${academicYearValue}${molba.ciklus ? ' / ' + molba.ciklus + ' циклус' : ''}`,
               {
-                width:
-                  contentWidth,
-                lineGap:
-                  3
+                width: contentWidth,
+                lineGap: getBodyLineGap(3, bodyFontSize)
               }
             );
 
-          y =
-            doc.y + 14;
+          y = doc.y + getBodyLineGap(14, bodyFontSize);
 
           doc
             .font(boldFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               'Опис на молбата:',
               leftX,
               y,
               {
-                continued:
-                  true
+                continued: true
               }
             );
 
           doc
             .font(regularFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               ` ${descriptionValue || '-'}`,
               {
-                width:
-                  contentWidth,
-                lineGap:
-                  4
+                width: contentWidth,
+                lineGap: getBodyLineGap(4, bodyFontSize)
               }
             );
 
+          /* -----------------------------------------------------
+             FINAL BLOCK / FOOTER
+             -----------------------------------------------------
+             Required result:
+             - always on the last page;
+             - near the bottom of that page;
+             - immediately after the status/feedback block;
+             - black horizontal line above the confirmation sentence;
+             - confirmation centered;
+             - confirmation is never placed at the top of a page.
+          ----------------------------------------------------- */
+          const statusText =
+            `Статус: ${statusValue}`;
+
           const statusHeight =
             doc.heightOfString(
-              `Статус: ${statusValue}`,
+              statusText,
               {
-                width:
-                  contentWidth,
-                lineGap:
-                  2,
-                font:
-                  regularFont,
-                size:
-                  bodyFontSize
+                width: contentWidth,
+                lineGap: 2,
+                font: regularFont,
+                size: bodyFontSize
               }
             );
 
@@ -1591,16 +1560,12 @@ const generateArchivePdfFile = async (
               ? doc.heightOfString(
                   `Повратна информација: ${feedbackValue}`,
                   {
-                    width:
-                      contentWidth,
-                    lineGap:
-                      3,
-                    font:
-                      regularFont,
-                    size:
-                      bodyFontSize
+                    width: contentWidth,
+                    lineGap: getBodyLineGap(3, bodyFontSize),
+                    font: regularFont,
+                    size: bodyFontSize
                   }
-                ) + 18
+                )
               : 0;
 
           const confirmationHeight =
@@ -1608,251 +1573,164 @@ const generateArchivePdfFile = async (
               ? doc.heightOfString(
                   confirmationText,
                   {
-                    width:
-                      contentWidth,
-                    lineGap:
-                      2,
-                    font:
-                      regularFont,
-                    size:
-                      CONFIRMATION_FONT_SIZE
+                    width: contentWidth,
+                    lineGap: 2,
+                    font: regularFont,
+                    size: CONFIRMATION_FONT_SIZE,
+                    align: 'center'
                   }
                 )
               : 0;
 
-          const gapBetweenBlocks =
-            14;
+          const gapAfterStatus =
+            shouldRenderFeedback ? 12 : 24;
 
-          const footerReserve =
-            statusHeight +
-            feedbackHeight +
+          const gapAfterFeedback =
+            shouldRenderFeedback ? 16 : 0;
+
+          const lineThickness = 0.8;
+          const lineToConfirmation = 12;
+          const bottomPadding = 1;
+
+          const confirmationBlockHeight =
             confirmationHeight +
-            gapBetweenBlocks +
-            18;
+            lineToConfirmation +
+            lineThickness;
+
+          const footerHeight =
+            statusHeight +
+            gapAfterStatus +
+            feedbackHeight +
+            gapAfterFeedback +
+            confirmationBlockHeight +
+            bottomPadding;
 
           const pageBottom =
             doc.page.height -
             doc.page.margins.bottom;
 
-          let statusY =
-            doc.y + 28;
+          let footerTop =
+            pageBottom -
+            footerHeight;
 
+          /*
+           * If the current page does not have enough room for the complete
+           * footer, move the entire footer to a new final page.  The body is
+           * NOT reduced in this case unless the special one-page adaptive
+           * mode outside this function asks for a smaller font.
+           */
           if (
-            includeConfirmation
+            footerTop < doc.y + 12
           ) {
-            statusY =
-              Math.max(
-                statusY,
-                pageBottom -
-                  footerReserve
-              );
+            if (includeConfirmation) {
+              doc.addPage();
+
+              footerTop =
+                doc.page.height -
+                doc.page.margins.bottom -
+                footerHeight;
+            } else {
+              /* Body-only measurement: put status after the body normally. */
+              footerTop =
+                doc.y + 28;
+            }
           }
 
-          if (
-            statusY +
-              footerReserve >
-              pageBottom + 1
-          ) {
-            doc.addPage();
-
-            statusY =
-              doc.page.height -
-              doc.page.margins.bottom -
-              footerReserve;
-          }
+          /* Status */
+          let footerY =
+            footerTop;
 
           doc
             .font(boldFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               'Статус:',
               leftX,
-              statusY,
+              footerY,
               {
-                continued:
-                  true
+                continued: true
               }
             );
 
           doc
             .font(regularFont)
-            .fontSize(
-              bodyFontSize
-            )
+            .fontSize(bodyFontSize)
             .text(
               ` ${statusValue}`,
               {
-                width:
-                  contentWidth
+                width: contentWidth,
+                lineGap: 2
               }
             );
 
-          if (
-            shouldRenderFeedback
-          ) {
+          /* Optional feedback remains directly under status. */
+          if (shouldRenderFeedback) {
             doc
               .font(boldFont)
-              .fontSize(
-                bodyFontSize
-              )
+              .fontSize(bodyFontSize)
               .text(
                 'Повратна информација:',
                 leftX,
-                doc.y + 18,
+                footerY +
+                  statusHeight +
+                  12,
                 {
-                  continued:
-                    true
+                  continued: true
                 }
               );
 
             doc
               .font(regularFont)
-              .fontSize(
-                bodyFontSize
-              )
+              .fontSize(bodyFontSize)
               .text(
                 ` ${feedbackValue}`,
                 {
-                  width:
-                    contentWidth,
-                  lineGap:
-                    3
+                  width: contentWidth,
+                  lineGap: getBodyLineGap(3, bodyFontSize)
                 }
               );
           }
 
-          if (
-            includeConfirmation
-          ) {
-            const confirmationHeightNow =
-              doc.heightOfString(
-                confirmationText,
-                {
-                  width:
-                    contentWidth,
-                  lineGap:
-                    2,
-                  font:
-                    regularFont,
-                  size:
-                    CONFIRMATION_FONT_SIZE
-                }
-              );
+          if (includeConfirmation) {
+            const lineY =
+              footerTop +
+              statusHeight +
+              gapAfterStatus +
+              feedbackHeight +
+              gapAfterFeedback;
 
-            let confirmationY =
-              Math.max(
-                doc.y + 10,
-                doc.page.height -
-                  doc.page.margins.bottom -
-                  confirmationHeightNow
-              );
+            /* Black horizontal line above the digital confirmation. */
+            doc
+              .save()
+              .strokeColor('#000000')
+              .lineWidth(lineThickness)
+              .moveTo(
+                leftX,
+                lineY
+              )
+              .lineTo(
+                leftX + contentWidth,
+                lineY
+              )
+              .stroke()
+              .restore();
 
-            if (
-              confirmationY +
-                confirmationHeightNow >
-              doc.page.height -
-                doc.page.margins.bottom +
-                1
-            ) {
-              doc.addPage();
-
-              const finalBlockHeight =
-                statusHeight +
-                feedbackHeight +
-                confirmationHeightNow +
-                gapBetweenBlocks;
-
-              const finalStatusY =
-                doc.page.height -
-                doc.page.margins.bottom -
-                finalBlockHeight;
-
-              doc
-                .font(boldFont)
-                .fontSize(
-                  bodyFontSize
-                )
-                .text(
-                  'Статус:',
-                  leftX,
-                  finalStatusY,
-                  {
-                    continued:
-                      true
-                  }
-                );
-
-              doc
-                .font(regularFont)
-                .fontSize(
-                  bodyFontSize
-                )
-                .text(
-                  ` ${statusValue}`,
-                  {
-                    width:
-                      contentWidth
-                  }
-                );
-
-              if (
-                shouldRenderFeedback
-              ) {
-                doc
-                  .font(boldFont)
-                  .fontSize(
-                    bodyFontSize
-                  )
-                  .text(
-                    'Повратна информација:',
-                    leftX,
-                    doc.y + 18,
-                    {
-                      continued:
-                        true
-                    }
-                  );
-
-                doc
-                  .font(regularFont)
-                  .fontSize(
-                    bodyFontSize
-                  )
-                  .text(
-                    ` ${feedbackValue}`,
-                    {
-                      width:
-                        contentWidth,
-                      lineGap:
-                        3
-                    }
-                  );
-              }
-
-              confirmationY =
-                doc.page.height -
-                doc.page.margins.bottom -
-                confirmationHeightNow;
-            }
+            const confirmationY =
+              lineY +
+              lineThickness +
+              lineToConfirmation;
 
             doc
               .font(regularFont)
-              .fontSize(
-                CONFIRMATION_FONT_SIZE
-              )
+              .fontSize(CONFIRMATION_FONT_SIZE)
               .text(
                 confirmationText,
                 leftX,
                 confirmationY,
                 {
-                  width:
-                    contentWidth,
-                  lineGap:
-                    2,
-                  align:
-                    'left'
+                  width: contentWidth,
+                  lineGap: 2,
+                  align: 'center'
                 }
               );
           }
@@ -1866,18 +1744,24 @@ const generateArchivePdfFile = async (
 
     return {
       buffer:
-        Buffer.concat(
-          chunks
-        ),
+        Buffer.concat(chunks),
       pageCount
     };
   };
 
+  /*
+   * First measure the actual request body without the digital confirmation.
+   * IMPORTANT:
+   * - If the body already needs more than one page, keep the original body
+   *   font size and allow multiple pages.
+   * - If the body fits on one page but the final confirmation would make it
+   *   spill to page 2, reduce ONLY the body from "Наслов..." downward until
+   *   the complete document fits on one page.
+   */
   const bodyOnly =
     await buildPdf(
       BASE_BODY_FONT_SIZE,
-      false,
-      'body-only'
+      false
     );
 
   let selectedBodyFontSize =
@@ -1885,51 +1769,35 @@ const generateArchivePdfFile = async (
 
   let finalPdf;
 
-  if (
-    bodyOnly.pageCount > 1
-  ) {
+  if (bodyOnly.pageCount > 1) {
     finalPdf =
       await buildPdf(
         BASE_BODY_FONT_SIZE,
-        true,
-        'multi-page'
+        true
       );
   } else {
     finalPdf =
       await buildPdf(
         BASE_BODY_FONT_SIZE,
-        true,
-        'adaptive'
+        true
       );
 
-    if (
-      finalPdf.pageCount > 1
-    ) {
+    if (finalPdf.pageCount > 1) {
       for (
         let size =
-          BASE_BODY_FONT_SIZE -
-          BODY_FONT_STEP;
-        size >=
-          MIN_BODY_FONT_SIZE;
-        size -=
-          BODY_FONT_STEP
+          BASE_BODY_FONT_SIZE - BODY_FONT_STEP;
+        size >= MIN_BODY_FONT_SIZE;
+        size -= BODY_FONT_STEP
       ) {
         const candidate =
           await buildPdf(
-            Number(
-              size.toFixed(2)
-            ),
-            true,
-            'adaptive'
+            Number(size.toFixed(2)),
+            true
           );
 
-        if (
-          candidate.pageCount === 1
-        ) {
+        if (candidate.pageCount === 1) {
           selectedBodyFontSize =
-            Number(
-              size.toFixed(2)
-            );
+            Number(size.toFixed(2));
 
           finalPdf =
             candidate;
@@ -1938,17 +1806,20 @@ const generateArchivePdfFile = async (
         }
       }
 
-      if (
-        finalPdf.pageCount > 1
-      ) {
+      /*
+       * If the content is genuinely too long to fit on one page even after
+       * reducing to the minimum readable size, keep it multi-page rather
+       * than shrinking it any further.  The footer remains at the bottom of
+       * the final page.
+       */
+      if (finalPdf.pageCount > 1) {
         selectedBodyFontSize =
           MIN_BODY_FONT_SIZE;
 
         finalPdf =
           await buildPdf(
             MIN_BODY_FONT_SIZE,
-            true,
-            'multi-page'
+            true
           );
       }
     }
@@ -1962,16 +1833,11 @@ const generateArchivePdfFile = async (
     finalPdf.buffer
   );
 
-  if (
-    fs.existsSync(
-      fullPath
-    )
-  ) {
+  if (fs.existsSync(fullPath)) {
     fs.rmSync(
       fullPath,
       {
-        force:
-          true
+        force: true
       }
     );
   }
@@ -1982,12 +1848,11 @@ const generateArchivePdfFile = async (
   );
 
   console.log(
-    `[PDF] molba=${molba.molbaId} pages=${finalPdf.pageCount} bodyFont=${selectedBodyFontSize}pt confirmation=${CONFIRMATION_FONT_SIZE}pt`
+    `[PDF] molba=${molba.molbaId} pages=${finalPdf.pageCount} bodyFont=${selectedBodyFontSize}pt confirmation=${CONFIRMATION_FONT_SIZE}pt footer=bottom-line`
   );
 
   return relativePath;
 };
-
 
 
 /* =========================================================
