@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Студенти</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/feitLogoBrowser.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header', { viewer, isImpersonating, getRoleLabel, convertNameToCyrillic }) %>
+
+  <!-- MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1 -->
+  <main class="container students-admin-page">
+    <div class="students-page-heading">
+      <div>
+        <div class="archive-page-eyebrow">Администрација</div>
+        <h2>Студенти</h2>
+      </div>
+      <a href="/dashboard" class="btn btn-secondary">← Dashboard</a>
+    </div>
+
+    <% if (success && success.length > 0) { %><div class="alert alert-success"><%= success %></div><% } %>
+    <% if (error && error.length > 0) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <div class="students-summary-card">
+      <span>Вкупно студенти</span>
+      <strong><%= totalStudents %></strong>
+    </div>
+
+    <div class="filter-bar student-directory-filter-bar">
+      <div class="filter-group">
+        <label for="studentMajorFilter">Насока:</label>
+        <select id="studentMajorFilter" class="form-select filter-select">
+          <option value="site" <%= currentMajor === 'site' ? 'selected' : '' %>>Сите</option>
+          <% majorOptions.forEach((major) => { %>
+            <option value="<%= major %>" <%= currentMajor === major ? 'selected' : '' %>><%= major %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="studentDirectoryIndexFilter">Бр. индекс:</label>
+        <input
+          id="studentDirectoryIndexFilter"
+          class="form-select filter-select"
+          type="text"
+          value="<%= currentStudentIndex %>"
+          placeholder="Пр. 106/2022"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="student-directory-filter-actions">
+        <button type="button" class="btn btn-primary btn-small" onclick="applyStudentDirectoryFilters()">Примени</button>
+        <button type="button" class="btn btn-secondary btn-small" onclick="clearStudentDirectoryFilters()">Исчисти</button>
+      </div>
+    </div>
+
+    <script>
+      function applyStudentDirectoryFilters() {
+        const params = new URLSearchParams();
+        params.set('smer', document.getElementById('studentMajorFilter').value);
+        params.set('studentIndex', document.getElementById('studentDirectoryIndexFilter').value.trim());
+        window.location.href = '/dashboard/students?' + params.toString();
+      }
+
+      function clearStudentDirectoryFilters() {
+        window.location.href = '/dashboard/students?smer=site&studentIndex=';
+      }
+    </script>
+
+    <section class="students-directory-card">
+      <div class="students-directory-card-heading">
+        <h3>Регистрирани студенти</h3>
+        <% if (hasActiveFilters) { %><span>Прикажани: <strong><%= students.length %></strong></span><% } %>
+      </div>
+
+      <% if (students.length === 0) { %>
+        <div class="empty-state students-empty-state">
+          <h3><%= hasActiveFilters ? 'Нема студенти што одговараат на применетите филтри' : 'Нема регистрирани студенти' %></h3>
+        </div>
+      <% } else { %>
+        <div class="table-wrapper">
+          <table class="molbi-table students-directory-table">
+            <thead>
+              <tr>
+                <th>Корисник</th>
+                <th>Email</th>
+                <th>Бр. индекс</th>
+                <th>Насока</th>
+                <th>Акции</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% students.forEach((student) => { %>
+                <tr>
+                  <td><strong><%= student.ime || '-' %> <%= student.prezime || '' %></strong></td>
+                  <td><%= student.email %></td>
+                  <td><%= student.brIndeks || '-' %></td>
+                  <td><%= student.smer || '-' %></td>
+                  <td><a href="/dashboard/students/<%= student.userId %>" class="btn btn-small btn-secondary">Детали</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

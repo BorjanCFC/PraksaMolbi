@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Архива на молби</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/feitLogoBrowser.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header', { viewer, isImpersonating, getRoleLabel, convertNameToCyrillic }) %>
+
+  <!-- MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1 -->
+  <!-- MOLBI_ACADEMIC_PERIOD_ARCHIVE_REFINEMENTS_V2 -->
+  <main class="container academic-archive-page">
+    <div class="archive-page-heading">
+      <div>
+        <div class="archive-page-eyebrow"></div>
+        <h2>Архива на молби</h2>
+      </div>
+      <a href="/dashboard" class="btn btn-secondary">← Тековен семестар</a>
+    </div>
+
+    <% if (success && success.length > 0) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+    <% if (error && error.length > 0) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <% const archivePeriods = periods || []; %>
+    <% const winterPeriods = archivePeriods.filter((period) => period.semestar === 'Зимски'); %>
+    <% const summerPeriods = archivePeriods.filter((period) => period.semestar === 'Летен'); %>
+
+    <% if (archivePeriods.length === 0) { %>
+      <div class="archive-empty-state">
+        <h3>Сè уште нема затворени семестри</h3>
+        <p>Кога администраторот ќе затвори семестар, неговите молби автоматски ќе се појават во архивата.</p>
+      </div>
+    <% } else { %>
+      <div class="archive-semester-columns">
+        <section class="archive-semester-column archive-semester-column-winter">
+          <div class="archive-semester-column-title">Зимски семестри</div>
+          <% if (winterPeriods.length === 0) { %>
+            <div class="archive-empty-mini">Нема зимски архивирани семестри.</div>
+          <% } else { %>
+            <% winterPeriods.forEach((period) => { %>
+              <a href="/dashboard/archive/<%= period.academicPeriodId %>" class="archive-period-card">
+                <div class="archive-period-icon">З</div>
+                <div class="archive-period-content">
+                  <div class="archive-period-title"><%= period.semestar %> <%= period.ucebnaGodina %></div>
+                  <div class="archive-period-meta">
+                    <span><%= period.molbiCount %> <%= period.molbiCount === 1 ? 'молба' : 'молби' %></span>
+                    <% if (period.closedAt) { %>
+                      <span>Затворен: <%= formatDateMk(period.closedAt) %></span>
+                    <% } %>
+                  </div>
+                </div>
+                <div class="archive-period-open">Отвори →</div>
+              </a>
+            <% }) %>
+          <% } %>
+        </section>
+
+        <section class="archive-semester-column archive-semester-column-summer">
+          <div class="archive-semester-column-title">Летни семестри</div>
+          <% if (summerPeriods.length === 0) { %>
+            <div class="archive-empty-mini">Нема летни архивирани семестри.</div>
+          <% } else { %>
+            <% summerPeriods.forEach((period) => { %>
+              <a href="/dashboard/archive/<%= period.academicPeriodId %>" class="archive-period-card">
+                <div class="archive-period-icon">Л</div>
+                <div class="archive-period-content">
+                  <div class="archive-period-title"><%= period.semestar %> <%= period.ucebnaGodina %></div>
+                  <div class="archive-period-meta">
+                    <span><%= period.molbiCount %> <%= period.molbiCount === 1 ? 'молба' : 'молби' %></span>
+                    <% if (period.closedAt) { %>
+                      <span>Затворен: <%= formatDateMk(period.closedAt) %></span>
+                    <% } %>
+                  </div>
+                </div>
+                <div class="archive-period-open">Отвори →</div>
+              </a>
+            <% }) %>
+          <% } %>
+        </section>
+      </div>
+    <% } %>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

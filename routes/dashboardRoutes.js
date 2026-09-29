@@ -42,6 +42,15 @@ router.use('/dashboard', async (req, res, next) => {
 
 
 router.get('/dashboard', molbiController.getDashboard);
+// MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1
+router.get('/dashboard/archive', molbiController.getAcademicPeriodArchive);
+router.get('/dashboard/archive/:periodId', molbiController.getAcademicPeriodArchiveDetail);
+router.post('/dashboard/academic-period/open', molbiController.openAcademicPeriod);
+router.post('/dashboard/academic-period/close', molbiController.closeAcademicPeriod);
+// MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1
+router.get('/dashboard/students', molbiController.getAdminStudents);
+router.get('/dashboard/students/:id', molbiController.getAdminStudentDetail);
+router.post('/dashboard/students/:id', molbiController.updateAdminStudent);
 router.get('/dashboard/admin-users/:id', molbiController.getAdminUserDetail);
 router.post('/dashboard/admin-users/:id/name', molbiController.updateAdminUserName);
 router.post('/dashboard/assign-role', molbiController.assignRoleByEmail);
@@ -49,6 +58,10 @@ router.post('/dashboard/users/:id/remove-role', molbiController.removeRoleFromUs
 router.get('/dashboard/nova-molba', molbiController.getNovaMolba);
 router.post('/dashboard/nova-molba', studentPdfUpload.single('document'), molbiController.postNovaMolba);
 router.get('/dashboard/molba/:id', molbiController.getMolbaDetail);
+// MOLBI_STUDENT_REVISION_V1
+router.post('/dashboard/molba/:id/student-revision', studentPdfUpload.single('document'), molbiController.updateStudentRevision);
+// MOLBI_PROFESSIONAL_REVISION_UI_V3
+router.post('/dashboard/molba/:id/student-document/delete', molbiController.deleteStudentRevisionDocument);
 router.post('/dashboard/molba/:id/service-review', molbiController.confirmServiceReview);
 
 router.post('/dashboard/molba/:id/status', molbiController.updateStatus);

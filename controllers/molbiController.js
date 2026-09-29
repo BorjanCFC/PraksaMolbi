@@ -3,13 +3,15 @@ const path = require('path');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
+const sequelize = require('../config/database');
 
 const {
   Molba,
   User,
   Student,
   Role,
-  UserRole
+  UserRole,
+  AcademicPeriod
 } = require('../models');
 
 const {
@@ -26,8 +28,10 @@ const {
   sendMolbaRejectedEmail
 } = require('../utils/emailService');
 
+// MOLBI_STUDENT_REQUEST_NUMBERING_PDF_NAMES_V1
 const {
-  convertNameToCyrillic
+  convertNameToCyrillic,
+  convertNameToLatin
 } = require('../utils/cyrillicConverter');
 
 const {
@@ -35,13 +39,20 @@ const {
   getArchivePath
 } = require('../utils/uploadPathHelper');
 
+// MOLBI_INDEX_FROM_EMAIL_MANUAL_MAJOR_V1
+const {
+  syncStudentIndexFromEmail
+} = require('../utils/studentEmailIdentity');
+
 
 /* =========================================================
    CONSTANTS
 ========================================================= */
 
+// MOLBI_STUDENT_REVISION_V1
 const allowedStatuses = new Set([
   'Во процес',
+  'Забелешка',
   'Одобрена',
   'Одбиена'
 ]);
@@ -55,6 +66,7 @@ const allowedSemestri = new Set([
 const FEIT_MAJOR_OPTIONS = [
   'ЕАОИЕ',
   'ЕЕПМ',
+  'ЕЕМП',
   'ЕЕС',
   'КСИАР',
   'КТИ',
@@ -70,12 +82,52 @@ const FEIT_MAJOR_SET =
 const academicYearPattern = /^\d{4}\/\d{4}$/;
 const allowedCiklusi = new Set(['Прв', 'Втор']);
 
+// MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1
+const ACADEMIC_PERIOD_STATUS = Object.freeze({
+  OPEN: 'OPEN',
+  CLOSED: 'CLOSED'
+});
+
+const getOpenAcademicPeriod = async (options = {}) =>
+  AcademicPeriod.findOne({
+    where: { status: ACADEMIC_PERIOD_STATUS.OPEN },
+    order: [['academicPeriodId', 'DESC']],
+    ...options
+  });
+
+const isValidAcademicYear = (value) => {
+  const clean = String(value || '').trim();
+  if (!academicYearPattern.test(clean)) return false;
+  const [startYear, endYear] = clean.split('/').map(Number);
+  return endYear === startYear + 1;
+};
+
+const formatAcademicPeriodLabel = (period) => {
+  if (!period) return 'Нема отворен семестар';
+  return `${period.semestar} ${period.ucebnaGodina}`;
+};
+
+const isMolbaInOpenAcademicPeriod = async (molba, options = {}) => {
+  if (!molba || !molba.academicPeriodId) return false;
+
+  const period = await AcademicPeriod.findByPk(
+    molba.academicPeriodId,
+    options
+  );
+
+  return Boolean(
+    period &&
+    period.status === ACADEMIC_PERIOD_STATUS.OPEN
+  );
+};
+
 
 
 const WORKFLOW_STAGE = {
   SUBMITTED: 'SUBMITTED',
   ARCHIVED: 'ARCHIVED',
   SERVICE_REVIEWED: 'SERVICE_REVIEWED',
+  STUDENT_REVISION: 'STUDENT_REVISION',
   DECIDED: 'DECIDED',
   COMPLETED: 'COMPLETED'
 };
@@ -84,6 +136,7 @@ const WORKFLOW_STAGE_LABEL = {
   SUBMITTED: 'Поднесена - чека архивирање',
   ARCHIVED: 'Архивирана - чека проверка од Студентска служба',
   SERVICE_REVIEWED: 'Проверена од Студентска служба - чека одлука од Продекан',
+  STUDENT_REVISION: 'Забелешка од Продекан - чека измена од студент',
   DECIDED: 'Одлуката е донесена - чека генерирање PDF',
   COMPLETED: 'Завршена'
 };
@@ -98,6 +151,10 @@ const getResolvedWorkflowStage = (molba) => {
 
   if (molba.arhivaPdfPath) {
     return WORKFLOW_STAGE.COMPLETED;
+  }
+
+  if (molba.status === 'Забелешка') {
+    return WORKFLOW_STAGE.STUDENT_REVISION;
   }
 
   if (
@@ -298,6 +355,11 @@ const molbaStudentInclude = [
         as: 'studentProfile'
       }
     ]
+  },
+  {
+    model: AcademicPeriod,
+    as: 'academicPeriod',
+    required: false
   }
 ];
 
@@ -420,6 +482,39 @@ const toPosixPath = (value) => {
   return value.replace(/\\/g, '/');
 };
 
+
+// MOLBI_PROFESSIONAL_REVISION_UI_V3
+// Some multipart parsers expose UTF-8 filenames as Latin-1 text (e.g. "Ð¼Ð¾Ð»Ð±Ð°.pdf").
+// Decode only when the typical mojibake markers are present so normal names stay untouched.
+const decodeLegacyUtf8FileName = (value) => {
+  const source = String(value || '');
+
+  if (!/[ÃÂÐÑâ]/.test(source)) {
+    return source;
+  }
+
+  try {
+    const decoded = Buffer.from(source, 'latin1').toString('utf8');
+
+    if (decoded && !decoded.includes('\uFFFD')) {
+      return decoded;
+    }
+  } catch (error) {
+    // Keep the original value if decoding is not possible.
+  }
+
+  return source;
+};
+
+const getReadableStoredFileName = (storedPath) => {
+  if (!storedPath) return '';
+
+  const baseName = path.basename(
+    String(storedPath).replace(/\\/g, '/')
+  );
+
+  return decodeLegacyUtf8FileName(baseName);
+};
 
 const ensureDir = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
@@ -989,24 +1084,34 @@ const generateArchivePdfFile = async (
     specificArchiveDir
   );
 
-  const safeIme =
-    String(
-      molba.student.ime || ''
-    )
-      .trim()
-      .replace(/\s+/g, '')
-      .replace(/[^\p{L}\p{N}]/gu, '');
+  // Filesystem name is always Latin/ASCII even when names are stored in Cyrillic.
+  const latinIme = convertNameToLatin(molba.student.ime || '');
+  const latinPrezime = convertNameToLatin(molba.student.prezime || '');
 
-  const safePrezime =
-    String(
-      molba.student.prezime || ''
-    )
-      .trim()
+  const safeStudentName =
+    `${latinIme}${latinPrezime}`
       .replace(/\s+/g, '')
-      .replace(/[^\p{L}\p{N}]/gu, '');
+      .replace(/[^A-Za-z0-9]/g, '') ||
+    `Student${molba.userId}`;
+
+  const indexForFileName =
+    molba.student.brIndeks ||
+    (
+      molba.student.studentProfile
+        ? molba.student.studentProfile.brIndeks
+        : null
+    ) ||
+    'NoIndex';
+
+  const safeIndex =
+    String(indexForFileName)
+      .trim()
+      .replace(/\//g, '-')
+      .replace(/[^A-Za-z0-9-]/g, '') ||
+    'NoIndex';
 
   const fileName =
-    `Molbi-${molba.molbaId}-${safeIme}${safePrezime}.pdf`;
+    `Molba-${molba.molbaId}-${safeStudentName}-${safeIndex}.pdf`;
 
   const fullPath =
     path.join(
@@ -2239,6 +2344,272 @@ const prepareStudentData = (
 
 
 /* =========================================================
+   ACADEMIC PERIOD MANAGEMENT + ARCHIVE
+========================================================= */
+
+exports.openAcademicPeriod = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+
+  if (actor.role !== ROLE.ADMIN || !(await isCurrentAdminAuthorized(actor.userId))) {
+    return res.status(403).send('Само администратор може да отвори семестар.');
+  }
+
+  if (!validAdminRoleCsrf(req)) {
+    return res.status(403).send('Невалидна сесија. Освежете ја страницата.');
+  }
+
+  const semestar = String(req.body.semestar || '').trim();
+  const ucebnaGodina = String(req.body.ucebnaGodina || '').trim();
+
+  if (!allowedSemestri.has(semestar)) {
+    req.flash('error', 'Изберете Зимски или Летен семестар.');
+    return res.redirect('/dashboard');
+  }
+
+  if (!isValidAcademicYear(ucebnaGodina)) {
+    req.flash('error', 'Учебната година мора да биде во формат 2026/2027.');
+    return res.redirect('/dashboard');
+  }
+
+  try {
+    await AcademicPeriod.sequelize.transaction(async (transaction) => {
+      const openPeriod = await AcademicPeriod.findOne({
+        where: { status: ACADEMIC_PERIOD_STATUS.OPEN },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (openPeriod) {
+        throw new Error(`Веќе е отворен семестар ${formatAcademicPeriodLabel(openPeriod)}. Прво затворете го тековниот семестар.`);
+      }
+
+      const existing = await AcademicPeriod.findOne({
+        where: { semestar, ucebnaGodina },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (existing) {
+        throw new Error('Овој семестар и учебна година веќе постојат во системот и не може повторно да се отворат.');
+      }
+
+      await AcademicPeriod.create({
+        semestar,
+        ucebnaGodina,
+        status: ACADEMIC_PERIOD_STATUS.OPEN,
+        openedAt: new Date(),
+        openedByUserId: actor.userId,
+        closedAt: null,
+        closedByUserId: null
+      }, { transaction });
+    });
+
+    req.flash('success', `Успешно е отворен ${semestar} семестар ${ucebnaGodina}.`);
+    return res.redirect('/dashboard');
+  } catch (error) {
+    console.error('Open academic period error:', error);
+    req.flash('error', error.message || 'Неуспешно отворање на семестар.');
+    return res.redirect('/dashboard');
+  }
+};
+
+exports.closeAcademicPeriod = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+
+  if (actor.role !== ROLE.ADMIN || !(await isCurrentAdminAuthorized(actor.userId))) {
+    return res.status(403).send('Само администратор може да затвори семестар.');
+  }
+
+  if (!validAdminRoleCsrf(req)) {
+    return res.status(403).send('Невалидна сесија. Освежете ја страницата.');
+  }
+
+  try {
+    let closedLabel = '';
+
+    await AcademicPeriod.sequelize.transaction(async (transaction) => {
+      const period = await AcademicPeriod.findOne({
+        where: { status: ACADEMIC_PERIOD_STATUS.OPEN },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (!period) {
+        throw new Error('Во моментот нема отворен семестар.');
+      }
+
+      closedLabel = formatAcademicPeriodLabel(period);
+
+      await period.update({
+        status: ACADEMIC_PERIOD_STATUS.CLOSED,
+        closedAt: new Date(),
+        closedByUserId: actor.userId
+      }, { transaction });
+    });
+
+    req.flash('success', `${closedLabel} е затворен и неговите молби се достапни во Архива на молби.`);
+    return res.redirect('/dashboard');
+  } catch (error) {
+    console.error('Close academic period error:', error);
+    req.flash('error', error.message || 'Неуспешно затворање на семестар.');
+    return res.redirect('/dashboard');
+  }
+};
+
+exports.getAcademicPeriodArchive = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+
+  try {
+    const rows = await AcademicPeriod.findAll({
+      where: { status: ACADEMIC_PERIOD_STATUS.CLOSED }
+    });
+
+    const periods = await Promise.all(rows.map(async (period) => {
+      const molbiCount = await Molba.count({
+        where: { academicPeriodId: period.academicPeriodId }
+      });
+
+      return {
+        ...period.get({ plain: true }),
+        molbiCount
+      };
+    }));
+
+    periods.sort((a, b) => {
+      const ay = Number(String(a.ucebnaGodina || '').split('/')[0]) || 0;
+      const by = Number(String(b.ucebnaGodina || '').split('/')[0]) || 0;
+      if (ay !== by) return by - ay;
+      const rank = { 'Летен': 1, 'Зимски': 0 };
+      return (rank[b.semestar] ?? -1) - (rank[a.semestar] ?? -1);
+    });
+
+    return res.render('archive-semesters', {
+      title: 'Архива на молби',
+      viewer: actor,
+      getRoleLabel,
+      convertNameToCyrillic,
+      formatDateMk,
+      isImpersonating: false,
+      periods,
+      success: req.flash('success'),
+      error: req.flash('error')
+    });
+  } catch (error) {
+    console.error('Academic archive error:', error);
+    req.flash('error', 'Настана грешка при вчитување на архивата.');
+    return res.redirect('/dashboard');
+  }
+};
+
+exports.getAcademicPeriodArchiveDetail = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+
+  const periodId = Number(req.params.periodId);
+  if (!Number.isSafeInteger(periodId) || periodId <= 0) {
+    return res.status(400).send('Невалиден семестар.');
+  }
+
+  const {
+    status,
+    semestar,
+    ucebnaGodina,
+    ciklus,
+    studentIndex,
+    fromDate,
+    toDate
+  } = req.query;
+
+  const hasActiveFilters = Boolean(
+    (status && status !== 'site') ||
+    (semestar && semestar !== 'site') ||
+    (ucebnaGodina && ucebnaGodina !== 'site') ||
+    (ciklus && ciklus !== 'site') ||
+    String(studentIndex || '').trim() ||
+    fromDate ||
+    toDate
+  );
+
+  try {
+    const period = await AcademicPeriod.findOne({
+      where: {
+        academicPeriodId: periodId,
+        status: ACADEMIC_PERIOD_STATUS.CLOSED
+      }
+    });
+
+    if (!period) {
+      req.flash('error', 'Архивираниот семестар не е пронајден.');
+      return res.redirect('/dashboard/archive');
+    }
+
+    const where = { academicPeriodId: periodId };
+
+    if (status && status !== 'site' && allowedStatuses.has(status)) {
+      where.status = status;
+    }
+
+    if (semestar && semestar !== 'site' && allowedSemestri.has(semestar)) {
+      where.semestar = semestar;
+    }
+
+    if (
+      ucebnaGodina &&
+      ucebnaGodina !== 'site' &&
+      academicYearPattern.test(ucebnaGodina)
+    ) {
+      where.ucebnaGodina = ucebnaGodina;
+    }
+
+    if (ciklus && ciklus !== 'site' && allowedCiklusi.has(ciklus)) {
+      where.ciklus = ciklus;
+    }
+
+    addDateFilter(where, fromDate, toDate);
+
+    const molbi = await Molba.findAll({
+      where,
+      include: buildMolbaStudentInclude(studentIndex),
+      order: newestFirstOrder
+    });
+
+    prepareStudentData(molbi);
+
+    const totalMolbiCount = await Molba.count({
+      where: { academicPeriodId: periodId }
+    });
+
+    return res.render('archive-semester-detail', {
+      title: `Архива - ${formatAcademicPeriodLabel(period)}`,
+      viewer: actor,
+      getRoleLabel,
+      convertNameToCyrillic,
+      formatDateMk,
+      isImpersonating: false,
+      period,
+      molbi,
+      totalMolbiCount,
+      hasActiveFilters,
+      academicYearOptions: [period.ucebnaGodina],
+      currentStatus: status || 'site',
+      currentSemestar: semestar || 'site',
+      currentAcademicYear: ucebnaGodina || 'site',
+      currentCiklus: ciklus || 'site',
+      currentStudentIndex: String(studentIndex || '').trim(),
+      currentFromDate: fromDate || '',
+      currentToDate: toDate || ''
+    });
+  } catch (error) {
+    console.error('Academic archive detail error:', error);
+    req.flash('error', 'Настана грешка при вчитување на архивираниот семестар.');
+    return res.redirect('/dashboard/archive');
+  }
+};
+
+/* =========================================================
    GET /dashboard
 ========================================================= */
 
@@ -2310,6 +2681,11 @@ exports.getDashboard = async (
         user.role
       )
     ) {
+
+      await syncStudentIndexFromEmail({
+        userId: user.userId,
+        email: user.email
+      });
 
       const student =
         await User.findByPk(
@@ -2438,14 +2814,14 @@ exports.getDashboard = async (
 
       /*
        * Kaj student:
-       * active = Vo proces
+       * active = Vo proces / Zabeleshka
        * completed = Odobrena / Odbiena
        */
       const activeMolbi =
         molbi.filter(
           (item) =>
-            item.status ===
-            'Во процес'
+            item.status === 'Во процес' ||
+            item.status === 'Забелешка'
         );
 
 
@@ -2558,7 +2934,13 @@ exports.getDashboard = async (
        STAFF DASHBOARD
     ===================================================== */
 
-    const where = {};
+    const activeAcademicPeriod = await getOpenAcademicPeriod();
+
+    const where = {
+      academicPeriodId: activeAcademicPeriod
+        ? activeAcademicPeriod.academicPeriodId
+        : -1
+    };
 
 
     if (
@@ -2717,6 +3099,12 @@ exports.getDashboard = async (
 
     const allRaw =
       await Molba.findAll({
+        where: {
+          academicPeriodId: activeAcademicPeriod
+            ? activeAcademicPeriod.academicPeriodId
+            : -1
+        },
+
         include:
           molbaStudentInclude,
 
@@ -2842,6 +3230,7 @@ exports.getDashboard = async (
         adminAccounts,
         adminCsrfToken,
         adminRoleOptions,
+        activeAcademicPeriod,
         currentCiklus: ciklus || 'site',
 
         canManage:
@@ -2866,6 +3255,13 @@ exports.getDashboard = async (
               (item) =>
                 item.status ===
                 'Во процес'
+            ).length,
+
+          zabeleshki:
+            allRole.filter(
+              (item) =>
+                item.status ===
+                'Забелешка'
             ).length,
 
           odobreni:
@@ -2940,6 +3336,200 @@ exports.getDashboard = async (
     return res.redirect(
       '/login'
     );
+  }
+};
+
+
+/* =========================================================
+   MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1
+   ADMIN STUDENT DIRECTORY
+========================================================= */
+
+exports.getAdminStudents = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+
+  if (actor.role !== ROLE.ADMIN || !(await isCurrentAdminAuthorized(actor.userId))) {
+    return res.status(403).send('Само администратор има пристап до студентите.');
+  }
+
+  const requestedMajor = String(req.query.smer || 'site').trim();
+  const currentMajor = FEIT_MAJOR_SET.has(requestedMajor) ? requestedMajor : 'site';
+  const currentStudentIndex = String(req.query.studentIndex || '').trim();
+  const studentWhere = {};
+
+  if (currentMajor !== 'site') {
+    studentWhere.smer = currentMajor;
+  }
+
+  if (currentStudentIndex) {
+    studentWhere.brIndeks = {
+      [Op.iLike]: `%${currentStudentIndex}%`
+    };
+  }
+
+  try {
+    const totalStudents = await Student.count();
+
+    const users = await User.findAll({
+      include: [{
+        model: Student,
+        as: 'studentProfile',
+        required: true,
+        where: studentWhere
+      }],
+      order: [
+        ['prezime', 'ASC'],
+        ['ime', 'ASC'],
+        ['email', 'ASC']
+      ]
+    });
+
+    const students = users.map((user) => ({
+      userId: user.userId,
+      ime: user.ime || '',
+      prezime: user.prezime || '',
+      email: user.email || '',
+      brIndeks: user.studentProfile ? user.studentProfile.brIndeks : null,
+      smer: user.studentProfile ? user.studentProfile.smer : null
+    }));
+
+    return res.render('students-admin', {
+      title: 'Студенти',
+      viewer: actor,
+      getRoleLabel,
+      convertNameToCyrillic,
+      isImpersonating: false,
+      students,
+      totalStudents,
+      majorOptions: FEIT_MAJOR_OPTIONS,
+      currentMajor,
+      currentStudentIndex,
+      hasActiveFilters: currentMajor !== 'site' || Boolean(currentStudentIndex),
+      success: req.flash('success'),
+      error: req.flash('error')
+    });
+  } catch (error) {
+    console.error('Admin students directory error:', error);
+    req.flash('error', 'Неуспешно вчитување на студентите.');
+    return res.redirect('/dashboard');
+  }
+};
+
+exports.getAdminStudentDetail = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+
+  if (actor.role !== ROLE.ADMIN || !(await isCurrentAdminAuthorized(actor.userId))) {
+    return res.status(403).send('Само администратор има пристап до овој преглед.');
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).send('Невалиден студент.');
+  }
+
+  try {
+    const target = await User.findByPk(id, {
+      include: [{
+        model: Student,
+        as: 'studentProfile',
+        required: true
+      }]
+    });
+
+    if (!target || !target.studentProfile) {
+      return res.status(404).send('Студентот не е пронајден.');
+    }
+
+    return res.render('student-admin-detail', {
+      title: 'Детали за студент',
+      viewer: actor,
+      getRoleLabel,
+      convertNameToCyrillic,
+      isImpersonating: false,
+      account: {
+        userId: target.userId,
+        ime: target.ime || '',
+        prezime: target.prezime || '',
+        email: target.email || '',
+        brIndeks: target.studentProfile.brIndeks || '',
+        smer: target.studentProfile.smer || ''
+      },
+      majorOptions: FEIT_MAJOR_OPTIONS,
+      adminCsrfToken: ensureAdminRoleCsrf(req),
+      success: req.flash('success'),
+      error: req.flash('error')
+    });
+  } catch (error) {
+    console.error('Admin student detail error:', error);
+    return res.status(500).send('Неуспешно вчитување на студентот.');
+  }
+};
+
+exports.updateAdminStudent = async (req, res) => {
+  const actor = requireStaff(req, res);
+  if (!actor) return;
+
+  if (actor.role !== ROLE.ADMIN || !(await isCurrentAdminAuthorized(actor.userId))) {
+    return res.status(403).send('Само администратор може да менува студентски податоци.');
+  }
+
+  if (!validAdminRoleCsrf(req)) {
+    return res.status(403).send('Невалидна сесија. Освежете ја страницата.');
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).send('Невалиден студент.');
+  }
+
+  const ime = normalizeStaffName(req.body.ime);
+  const prezime = normalizeStaffName(req.body.prezime);
+  const smer = String(req.body.smer || '').trim();
+
+  if (!validStaffNamePair(ime, prezime)) {
+    req.flash('error', 'Внесете валидно име и презиме.');
+    return res.redirect(`/dashboard/students/${id}`);
+  }
+
+  if (!FEIT_MAJOR_SET.has(smer)) {
+    req.flash('error', 'Изберете валидна насока.');
+    return res.redirect(`/dashboard/students/${id}`);
+  }
+
+  try {
+    await User.sequelize.transaction(async (transaction) => {
+      const target = await User.findByPk(id, {
+        include: [{
+          model: Student,
+          as: 'studentProfile',
+          required: true
+        }],
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (!target || !target.studentProfile) {
+        throw new Error('Студентот не е пронајден.');
+      }
+
+      await target.update({ ime, prezime }, { transaction });
+      await target.studentProfile.update({ smer }, { transaction });
+    });
+
+    if (id === actor.userId && req.session && req.session.user) {
+      req.session.user.ime = ime;
+      req.session.user.prezime = prezime;
+      req.session.user.smer = smer;
+    }
+
+    req.flash('success', 'Податоците за студентот се успешно зачувани.');
+    return res.redirect('/dashboard/students');
+  } catch (error) {
+    console.error('Admin student update error:', error);
+    req.flash('error', error.message || 'Неуспешно зачувување на студентот.');
+    return res.redirect(`/dashboard/students/${id}`);
   }
 };
 
@@ -3492,6 +4082,12 @@ exports.confirmServiceReview =
       }
 
 
+      if (!(await isMolbaInOpenAcademicPeriod(molba))) {
+        req.flash('error', 'Оваа молба припаѓа на затворен семестар и е достапна само за преглед.');
+        return res.redirect('/dashboard');
+      }
+
+
       const stage =
         getResolvedWorkflowStage(
           molba
@@ -3659,75 +4255,44 @@ exports.getNovaMolba =
     req,
     res
   ) => {
-
-    const user =
-      requireStudent(
-        req,
-        res
-      );
-
-
-    if (!user) {
-      return;
-    }
-
+    const user = requireStudent(req, res);
+    if (!user) return;
 
     try {
+      /*
+       * Keep brIndeks synchronized even if this browser session existed before
+       * the login patch was applied. This never changes Student.smer.
+       */
+      await syncStudentIndexFromEmail({
+        userId: user.userId,
+        email: user.email
+      });
 
-      const studentProfile =
-        await Student.findOne({
-          where: {
-            userId:
-              user.userId
-          }
-        });
+      const [studentProfile, activeAcademicPeriod] = await Promise.all([
+        Student.findOne({ where: { userId: user.userId } }),
+        getOpenAcademicPeriod()
+      ]);
 
+      if (req.session && req.session.user && studentProfile) {
+        req.session.user.brIndeks = studentProfile.brIndeks || null;
+        req.session.user.smer = studentProfile.smer || null;
+      }
 
-      return res.render(
-        'nova-molba',
-        {
-          title:
-            'Нова молба',
-
-          viewer:
-            user,
-
-          getRoleLabel,
-
-          convertNameToCyrillic,
-
-          isImpersonating:
-            false,
-
-          studentProfile,
-
-          majorOptions:
-            FEIT_MAJOR_OPTIONS,
-
-          error:
-            req.flash(
-              'error'
-            )
-        }
-      );
-
+      return res.render('nova-molba', {
+        title: 'Нова молба',
+        viewer: req.session && req.session.user ? req.session.user : user,
+        getRoleLabel,
+        convertNameToCyrillic,
+        isImpersonating: false,
+        studentProfile,
+        activeAcademicPeriod,
+        majorOptions: FEIT_MAJOR_OPTIONS,
+        error: req.flash('error')
+      });
     } catch (error) {
-
-      console.error(
-        'Load nova molba error:',
-        error
-      );
-
-
-      req.flash(
-        'error',
-        'Настана грешка при вчитување на формата.'
-      );
-
-
-      return res.redirect(
-        '/dashboard'
-      );
+      console.error('Load nova molba error:', error);
+      req.flash('error', 'Настана грешка при вчитување на формата.');
+      return res.redirect('/dashboard');
     }
   };
 
@@ -3748,7 +4313,9 @@ const preserveOriginalStudentPdfName = (file) => {
 
   // Never use a client-provided directory as the destination.
   const original = path.basename(
-    String(file.originalname).replace(/\\/g, '/')
+    decodeLegacyUtf8FileName(
+      String(file.originalname).replace(/\\/g, '/')
+    )
   );
 
   const clean = original
@@ -3849,317 +4416,418 @@ const preserveOriginalStudentPdfName = (file) => {
   throw new Error('Too many files with the same name.');
 };
 
+const deleteFileQuietly = (fullPath, label = 'file') => {
+  if (!fullPath) return;
+
+  try {
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  } catch (error) {
+    console.warn(`[Controller] ${label} delete warning:`, error.message);
+  }
+};
+
+const discardUploadedFile = (file) => {
+  if (!file || !file.path) return;
+  deleteFileQuietly(path.resolve(file.path), 'uploaded file');
+};
+
 exports.postNovaMolba =
   async (
     req,
     res
   ) => {
-    const user =
-      requireStudent(
-        req,
-        res
-      );
+    const user = requireStudent(req, res);
 
     if (!user) {
+      discardUploadedFile(req.file);
       return;
     }
 
-
     try {
+      const activeAcademicPeriod = await getOpenAcademicPeriod();
+
+      if (!activeAcademicPeriod) {
+        discardUploadedFile(req.file);
+        req.flash('error', 'Во моментот нема отворен семестар. Не може да се поднесе нова молба.');
+        return res.redirect('/dashboard/nova-molba');
+      }
+
+      /* brIndeks is server-controlled; smer is student-selected. */
+      await syncStudentIndexFromEmail({
+        userId: user.userId,
+        email: user.email
+      });
+
+      const studentProfile = await Student.findOne({
+        where: {
+          userId: user.userId
+        }
+      });
+
+      const cleanIndex = String(studentProfile?.brIndeks || '').trim();
+
+      if (!cleanIndex) {
+        discardUploadedFile(req.file);
+        req.flash(
+          'error',
+          'Не може да се утврди бројот на индекс од FEIT email адресата. Одјавете се и најавете се повторно.'
+        );
+        return res.redirect('/dashboard/nova-molba');
+      }
+
       const {
         naslov,
-        semestar,
-        ucebnaGodina,
         ciklus,
-        description,
-        brIndeks,
-        smer
+        smer,
+        description
       } = req.body;
 
+      const existingSmer = String(studentProfile?.smer || '').trim();
+      const submittedSmer = String(smer || '').trim();
+      const cleanSmer = FEIT_MAJOR_SET.has(existingSmer)
+        ? existingSmer
+        : submittedSmer;
 
-      if (
-        !naslov ||
-        naslov.trim() === ''
-      ) {
-        req.flash(
-          'error',
-          'Насловот е задолжителен.'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
+      if (!FEIT_MAJOR_SET.has(cleanSmer)) {
+        discardUploadedFile(req.file);
+        req.flash('error', 'Изберете валидна насока.');
+        return res.redirect('/dashboard/nova-molba');
       }
 
-
-      if (
-        !semestar ||
-        !allowedSemestri.has(
-          semestar
-        )
-      ) {
-        req.flash(
-          'error',
-          'Семестарот мора да биде Зимски или Летен.'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
+      if (!naslov || naslov.trim() === '') {
+        discardUploadedFile(req.file);
+        req.flash('error', 'Насловот е задолжителен.');
+        return res.redirect('/dashboard/nova-molba');
       }
-
-
-      if (
-        !ucebnaGodina ||
-        !academicYearPattern.test(
-          ucebnaGodina.trim()
-        )
-      ) {
-        req.flash(
-          'error',
-          'Учебната година мора да биде во формат ГГГГ/ГГГГ (пример 2025/2026).'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
-      }
-
-
-      const [
-        startYear,
-        endYear
-      ] =
-        ucebnaGodina
-          .trim()
-          .split('/')
-          .map(Number);
-
-
-      if (
-        endYear !==
-        startYear + 1
-      ) {
-        req.flash(
-          'error',
-          'Учебната година не е валидна.'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
-      }
-
 
       if (!allowedCiklusi.has(ciklus)) {
+        discardUploadedFile(req.file);
         req.flash('error', 'Изберете Прв или Втор циклус на студии.');
         return res.redirect('/dashboard/nova-molba');
       }
 
-      if (
-        !brIndeks ||
-        brIndeks.trim() === ''
-      ) {
-        req.flash(
-          'error',
-          'Бројот на индекс е задолжителен.'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
-      }
-
-
-      if (!smer || !FEIT_MAJOR_SET.has(String(smer).trim())) {
-        req.flash(
-          'error',
-          'Насоката е задолжителна.'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
-      }
-
-
-      const cleanDescription =
-        String(
-          description ||
-          ''
-        ).trim();
-
-
+      const cleanDescription = String(description || '').trim();
       if (!cleanDescription) {
-        req.flash(
-          'error',
-          'Текстот на молбата е задолжителен.'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
+        discardUploadedFile(req.file);
+        req.flash('error', 'Текстот на молбата е задолжителен.');
+        return res.redirect('/dashboard/nova-molba');
       }
-
 
       if (!req.file) {
-        req.flash(
-          'error',
-          'Прикачување PDF документ е задолжително.'
-        );
-
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
+        req.flash('error', 'Прикачување PDF документ е задолжително.');
+        return res.redirect('/dashboard/nova-molba');
       }
 
-
-      await Student.upsert({
-        userId:
-          user.userId,
-
-        brIndeks:
-          brIndeks.trim(),
-
-        smer:
-          smer.trim()
-      });
-
-
-      if (
-        req.session &&
-        req.session.user
-      ) {
-        req.session.user.brIndeks =
-          brIndeks.trim();
-
-        req.session.user.smer =
-          smer.trim();
-      }
-
-
-      /*
-       * GLAVNATA AKCIJA:
-       * molbata se kreira nezavisno od email.
-       */
       preserveOriginalStudentPdfName(req.file);
 
-      await Molba.create({
-        userId:
-          user.userId,
-
-        naslov:
-          naslov.trim(),
-
-        semestar,
-
-        ciklus,
-
-        ucebnaGodina:
-          ucebnaGodina.trim(),
-
-        description:
-          cleanDescription,
-
-        status:
-          'Во процес',
-
-        datum:
-          new Date(),
-
-        arhivskiBroj:
-          null,
-
-        workflowStage:
-          WORKFLOW_STAGE.SUBMITTED,
-
-        sluzhbaFeedback:
-          null,
-
-        prodekanFeedback:
-          null,
-
-        urlPath:
-          toPosixPath(
-            path.join(
-              getStudentDocumentPath(
-                smer.trim(),
-                user.ime,
-                user.prezime
-              ),
-
-              req.file.filename
-            )
-          )
-      });
-
+      const relativeUploadPath = toPosixPath(
+        path.join(
+          getStudentDocumentPath(
+            cleanSmer,
+            user.ime,
+            user.prezime
+          ),
+          req.file.filename
+        )
+      );
 
       /*
-       * EMAIL E SECONDARY.
-       *
-       * Duri i SMTP / network da padne,
-       * molbata ostanuva kreirana.
+       * Allocate the per-student request number atomically.
+       * Locking the Student row prevents two simultaneous submissions from
+       * receiving the same studentMolbaBroj.
        */
-      if (user.email) {
-        const studentFullName =
-          `${user.ime} ${user.prezime}`;
+      const createdMolba = await sequelize.transaction(async (transaction) => {
+        const lockedStudent = await Student.findOne({
+          where: { userId: user.userId },
+          transaction,
+          lock: transaction.LOCK.UPDATE
+        });
 
+        if (!lockedStudent) {
+          throw new Error('Student profile not found while allocating request number.');
+        }
+
+        const maxExistingNumber = await Molba.max(
+          'studentMolbaBroj',
+          {
+            where: { userId: user.userId },
+            transaction
+          }
+        );
+
+        const nextStudentMolbaBroj =
+          Math.max(
+            Number(lockedStudent.brojMolbi || 0),
+            Number(maxExistingNumber || 0)
+          ) + 1;
+
+        const lockedExistingSmer = String(lockedStudent.smer || '').trim();
+        if (!FEIT_MAJOR_SET.has(lockedExistingSmer)) {
+          lockedStudent.smer = cleanSmer;
+        }
+        lockedStudent.brojMolbi = nextStudentMolbaBroj;
+        await lockedStudent.save({ transaction });
+
+        return Molba.create(
+          {
+            userId: user.userId,
+            studentMolbaBroj: nextStudentMolbaBroj,
+            academicPeriodId: activeAcademicPeriod.academicPeriodId,
+            naslov: naslov.trim(),
+            semestar: activeAcademicPeriod.semestar,
+            ucebnaGodina: activeAcademicPeriod.ucebnaGodina,
+            ciklus,
+            description: cleanDescription,
+            status: 'Во процес',
+            datum: new Date(),
+            arhivskiBroj: null,
+            workflowStage: WORKFLOW_STAGE.SUBMITTED,
+            sluzhbaFeedback: null,
+            prodekanFeedback: null,
+            urlPath: relativeUploadPath
+          },
+          { transaction }
+        );
+      });
+
+      if (req.session && req.session.user) {
+        req.session.user.brIndeks = cleanIndex;
+        req.session.user.smer = cleanSmer;
+      }
+
+      if (user.email) {
+        const studentFullName = `${user.ime} ${user.prezime}`;
         runBackgroundEmail(
           'Molba created',
-          () =>
-            sendMolbaCreatedEmail(
-              user.email,
-              studentFullName,
-              naslov.trim()
-            )
+          () => sendMolbaCreatedEmail(user.email, studentFullName, naslov.trim())
         );
       }
 
-
-      req.flash(
-        'success',
-        'Молбата е успешно поднесена.'
+      console.log(
+        `[Molba] created globalId=${createdMolba.molbaId} studentNumber=${createdMolba.studentMolbaBroj} userId=${user.userId}`
       );
 
-
-      return res.redirect(
-        '/dashboard'
-      );
-
+      req.flash('success', 'Молбата е успешно поднесена.');
+      return res.redirect('/dashboard');
     } catch (error) {
-      if (
-        error &&
-        error.name ===
-        'SequelizeUniqueConstraintError'
-      ) {
-        req.flash(
-          'error',
-          'Бројот на индекс веќе постои.'
-        );
+      discardUploadedFile(req.file);
 
-        return res.redirect(
-          '/dashboard/nova-molba'
-        );
-      }
-
-
-      console.error(
-        'Create molba error:',
-        error
-      );
-
-
-      req.flash(
-        'error',
-        'Настана грешка при креирање на молбата.'
-      );
-
-
-      return res.redirect(
-        '/dashboard/nova-molba'
-      );
+      console.error('Create molba error:', error);
+      req.flash('error', 'Настана грешка при креирање на молбата.');
+      return res.redirect('/dashboard/nova-molba');
     }
   };
+
+/* =========================================================
+   POST /dashboard/molba/:id/student-revision
+
+   Student can edit only while the request is explicitly waiting
+   for a correction requested by the vice-dean.
+========================================================= */
+exports.deleteStudentRevisionDocument = async (req, res) => {
+  const user = requireStudent(req, res);
+  if (!user) return;
+
+  const returnPath = `/dashboard/molba/${req.params.id}`;
+
+  try {
+    const molba = await Molba.findOne({
+      where: {
+        molbaId: req.params.id,
+        userId: user.userId
+      }
+    });
+
+    if (!molba) {
+      req.flash('error', 'Молбата не е пронајдена.');
+      return res.redirect('/dashboard');
+    }
+
+    const period = molba.academicPeriodId
+      ? await AcademicPeriod.findByPk(molba.academicPeriodId)
+      : null;
+
+    if (!period || period.status !== ACADEMIC_PERIOD_STATUS.OPEN) {
+      req.flash('error', 'Молбата е од затворен семестар и повеќе не може да се менува.');
+      return res.redirect(returnPath);
+    }
+
+    if (molba.status !== 'Забелешка') {
+      req.flash('error', 'Документот може да се менува само додека молбата е со статус „Забелешка“.');
+      return res.redirect(returnPath);
+    }
+
+    if (!molba.urlPath) {
+      req.flash('success', 'Молбата веќе нема прикачен PDF документ.');
+      return res.redirect(returnPath);
+    }
+
+    const oldRelativePath = molba.urlPath;
+    const oldFullPath = resolveUploadPath(oldRelativePath);
+
+    molba.urlPath = null;
+    await molba.save();
+
+    if (oldFullPath) {
+      deleteFileQuietly(oldFullPath, 'student PDF');
+    }
+
+    req.flash('success', 'Прикачениот PDF документ е успешно отстранет.');
+    return res.redirect(returnPath);
+  } catch (error) {
+    console.error('Delete student revision document error:', error);
+    req.flash('error', 'Настана грешка при отстранување на PDF документот.');
+    return res.redirect(returnPath);
+  }
+};
+
+exports.updateStudentRevision = async (req, res) => {
+  const user = requireStudent(req, res);
+  if (!user) {
+    discardUploadedFile(req.file);
+    return;
+  }
+
+  const returnPath = `/dashboard/molba/${req.params.id}`;
+
+  try {
+    const molba = await Molba.findOne({
+      where: {
+        molbaId: req.params.id,
+        userId: user.userId
+      }
+    });
+
+    if (!molba) {
+      discardUploadedFile(req.file);
+      req.flash('error', 'Молбата не е пронајдена.');
+      return res.redirect('/dashboard');
+    }
+
+    const period = molba.academicPeriodId
+      ? await AcademicPeriod.findByPk(molba.academicPeriodId)
+      : null;
+
+    if (!period || period.status !== ACADEMIC_PERIOD_STATUS.OPEN) {
+      discardUploadedFile(req.file);
+      req.flash('error', 'Молбата е од затворен семестар и повеќе не може да се менува.');
+      return res.redirect(returnPath);
+    }
+
+    if (molba.status !== 'Забелешка') {
+      discardUploadedFile(req.file);
+      req.flash('error', 'Оваа молба во моментот не е отворена за измена.');
+      return res.redirect(returnPath);
+    }
+
+    await syncStudentIndexFromEmail({
+      userId: user.userId,
+      email: user.email
+    });
+
+    const studentProfile = await Student.findOne({
+      where: {
+        userId: user.userId
+      }
+    });
+
+    const cleanIndex = String(studentProfile?.brIndeks || '').trim();
+
+    if (!cleanIndex) {
+      discardUploadedFile(req.file);
+      req.flash(
+        'error',
+        'Не може да се утврди бројот на индекс од FEIT email адресата.'
+      );
+      return res.redirect(returnPath);
+    }
+
+    const {
+      naslov,
+      ciklus,
+      description,
+      removeExistingDocument
+    } = req.body;
+
+    const cleanNaslov = String(naslov || '').trim();
+    const cleanSmer = String(studentProfile?.smer || '').trim();
+    const cleanDescription = String(description || '').trim();
+
+    if (!FEIT_MAJOR_SET.has(cleanSmer)) {
+      discardUploadedFile(req.file);
+      req.flash('error', 'Изберете валидна насока.');
+      return res.redirect(returnPath);
+    }
+    const wantsDocumentRemoval = String(removeExistingDocument || '').trim() === '1';
+
+    if (!cleanNaslov) {
+      discardUploadedFile(req.file);
+      req.flash('error', 'Насловот е задолжителен.');
+      return res.redirect(returnPath);
+    }
+
+    if (!allowedCiklusi.has(ciklus)) {
+      discardUploadedFile(req.file);
+      req.flash('error', 'Изберете Прв или Втор циклус на студии.');
+      return res.redirect(returnPath);
+    }
+
+    if (!cleanDescription) {
+      discardUploadedFile(req.file);
+      req.flash('error', 'Текстот на молбата е задолжителен.');
+      return res.redirect(returnPath);
+    }
+
+    let replacementRelativePath = null;
+    if (req.file) {
+      preserveOriginalStudentPdfName(req.file);
+      replacementRelativePath = toPosixPath(
+        path.join(
+          getStudentDocumentPath(cleanSmer, user.ime, user.prezime),
+          req.file.filename
+        )
+      );
+    }
+
+    const oldRelativePath = molba.urlPath;
+    let nextRelativePath = oldRelativePath;
+
+    if (wantsDocumentRemoval) nextRelativePath = null;
+    if (replacementRelativePath) nextRelativePath = replacementRelativePath;
+
+    if (req.session && req.session.user) {
+      req.session.user.brIndeks = cleanIndex;
+      req.session.user.smer = cleanSmer;
+    }
+
+    molba.naslov = cleanNaslov;
+    // semestar / ucebnaGodina / brIndeks / smer are system-controlled.
+    molba.ciklus = ciklus;
+    molba.description = cleanDescription;
+    molba.urlPath = nextRelativePath;
+    molba.workflowStage = WORKFLOW_STAGE.SERVICE_REVIEWED;
+
+    await molba.save();
+
+    if ((wantsDocumentRemoval || replacementRelativePath) && oldRelativePath) {
+      const oldFullPath = resolveUploadPath(oldRelativePath);
+      const newFullPath = nextRelativePath ? resolveUploadPath(nextRelativePath) : null;
+      if (oldFullPath && (!newFullPath || oldFullPath !== newFullPath)) {
+        deleteFileQuietly(oldFullPath, 'old student PDF');
+      }
+    }
+
+    req.flash('success', 'Промените се успешно зачувани и молбата е повторно испратена до Продекан.');
+    return res.redirect('/dashboard');
+  } catch (error) {
+    discardUploadedFile(req.file);
+    console.error('Student revision error:', error);
+    req.flash('error', 'Настана грешка при зачувување на измените.');
+    return res.redirect(returnPath);
+  }
+};
 
 /* =========================================================
    GET /dashboard/molba/:id
@@ -4224,10 +4892,14 @@ exports.getMolbaDetail =
        * Studentot moze samo sopstvena molba.
        * Staff mora da ja ima dobieno vo svojata workflow faza.
        */
+      const isClosedAcademicPeriod = Boolean(
+        molba.academicPeriod &&
+        molba.academicPeriod.status === ACADEMIC_PERIOD_STATUS.CLOSED
+      );
+
       if (
-        !isStudentRole(
-          user.role
-        ) &&
+        !isStudentRole(user.role) &&
+        !isClosedAcademicPeriod &&
         !isWorkflowVisibleToRole(
           user.role,
           molba
@@ -4276,10 +4948,13 @@ exports.getMolbaDetail =
         );
 
 
-      const canArchiveNumber = user.role === ROLE.ARHIVA;
+      const canArchiveNumber =
+        !isClosedAcademicPeriod &&
+        user.role === ROLE.ARHIVA;
 
 
       const canServiceReview =
+        !isClosedAcademicPeriod &&
         user.role ===
           ROLE.STUDENTSKA_SLUZHBA &&
 
@@ -4288,6 +4963,7 @@ exports.getMolbaDetail =
 
 
       const canProdekanDecide =
+        !isClosedAcademicPeriod &&
         user.role ===
           ROLE.PRODEKAN &&
 
@@ -4295,7 +4971,15 @@ exports.getMolbaDetail =
           WORKFLOW_STAGE.SERVICE_REVIEWED;
 
 
+      // MOLBI_INLINE_REVISION_UI_V2
+      const canStudentRevise =
+        !isClosedAcademicPeriod &&
+        isStudentRole(user.role) &&
+        molba.status === 'Забелешка';
+
+
       const canGenerateMolbaPdf =
+        !isClosedAcademicPeriod &&
         user.role ===
           ROLE.STUDENTSKA_SLUZHBA &&
 
@@ -4325,7 +5009,7 @@ exports.getMolbaDetail =
         'molba-detail',
         {
           title:
-            `Молба #${molba.molbaId}`,
+            `Молба #${molba.studentMolbaBroj || molba.molbaId}`,
 
           viewer:
             user,
@@ -4358,6 +5042,12 @@ exports.getMolbaDetail =
           canServiceReview,
 
           canProdekanDecide,
+
+          canStudentRevise,
+
+          majorOptions: FEIT_MAJOR_OPTIONS,
+
+          getReadableStoredFileName,
 
           canGenerateMolbaPdf,
 
@@ -4472,6 +5162,12 @@ exports.generateMolbaPdf =
         return res.redirect(
           '/dashboard'
         );
+      }
+
+
+      if (!(await isMolbaInOpenAcademicPeriod(molba))) {
+        req.flash('error', 'Оваа молба припаѓа на затворен семестар и е достапна само за преглед.');
+        return res.redirect('/dashboard');
       }
 
 
@@ -4727,7 +5423,7 @@ exports.updateStatus =
     ) {
       req.flash(
         'error',
-        'Само Продеканот може да одобри или одбие молба.'
+        'Само Продеканот може да донесе одлука или да побара измена.'
       );
 
       return res.redirect(
@@ -4745,11 +5441,11 @@ exports.updateStatus =
 
 
       /*
-       * Konechna odluka:
-       * nema "Vo proces" od ovoj moment.
+       * Prodekan can either make a final decision or request a revision.
        */
       if (
         ![
+          'Забелешка',
           'Одобрена',
           'Одбиена'
         ].includes(
@@ -4758,7 +5454,7 @@ exports.updateStatus =
       ) {
         req.flash(
           'error',
-          'Изберете Одобрена или Одбиена.'
+          'Изберете Забелешка, Одобрена или Одбиена.'
         );
 
         return res.redirect(
@@ -4785,6 +5481,12 @@ exports.updateStatus =
       }
 
 
+      if (!(await isMolbaInOpenAcademicPeriod(molba))) {
+        req.flash('error', 'Оваа молба припаѓа на затворен семестар и е достапна само за преглед.');
+        return res.redirect('/dashboard');
+      }
+
+
       const stage =
         getResolvedWorkflowStage(
           molba
@@ -4806,47 +5508,49 @@ exports.updateStatus =
       }
 
 
-      molba.status =
-        status;
+      const cleanFeedback = String(feedback || '').trim();
+      const cleanProdekanFeedback = String(prodekanFeedback || '').trim();
 
+      if (status === 'Забелешка' && !cleanFeedback) {
+        req.flash(
+          'error',
+          'За статус „Забелешка“ внесете забелешка со измените што треба да ги направи студентот.'
+        );
 
-      /*
-       * feedback:
-       * se prikazhuva / prakja do studentot.
-       */
-      molba.feedback =
-        String(
-          feedback ||
-          ''
-        ).trim() ||
-        null;
+        return res.redirect(`/dashboard/molba/${req.params.id}`);
+      }
 
+      molba.status = status;
 
       /*
-       * prodekanFeedback:
-       * interno do Studentska sluzhba.
+       * feedback is the student-facing text. It remains editable on the next
+       * vice-dean review, so it can be cleared before approval or rewritten
+       * into a concise rejection reason before the final PDF is generated.
        */
-      molba.prodekanFeedback =
-        String(
-          prodekanFeedback ||
-          ''
-        ).trim() ||
-        null;
+      molba.feedback = cleanFeedback || null;
 
+      /* Internal note to Student Service. */
+      molba.prodekanFeedback = cleanProdekanFeedback || null;
 
-      molba.workflowStage =
-        WORKFLOW_STAGE.DECIDED;
+      if (status === 'Забелешка') {
+        molba.workflowStage = WORKFLOW_STAGE.STUDENT_REVISION;
+        molba.decisionAt = null;
+        molba.decisionByUserId = null;
+      } else {
+        molba.workflowStage = WORKFLOW_STAGE.DECIDED;
 
-      // The source of truth is the successful decision action, not audit.csv.
-      molba.decisionAt = new Date();
-      molba.decisionByUserId = user.userId;
+        // The source of truth is the successful final-decision action.
+        molba.decisionAt = new Date();
+        molba.decisionByUserId = user.userId;
+      }
 
       await molba.save();
 
-
       req.flash(
         'success',
-        'Одлуката е успешно зачувана и молбата е испратена до Студентската служба.'
+        status === 'Забелешка'
+          ? 'Забелешката е зачувана. Молбата е вратена кај студентот за измена.'
+          : 'Одлуката е успешно зачувана и молбата е испратена до Студентската служба.'
       );
 
 
@@ -5061,6 +5765,12 @@ exports.updateArchiveNumber =
       }
 
 
+      if (!(await isMolbaInOpenAcademicPeriod(molba))) {
+        req.flash('error', 'Оваа молба припаѓа на затворен семестар и е достапна само за преглед.');
+        return res.redirect('/dashboard');
+      }
+
+
       const currentStage =
         getResolvedWorkflowStage(
           molba
@@ -5228,9 +5938,7 @@ exports.downloadStudentDocument =
 
       return res.download(
         fullPath,
-        path.basename(
-          fullPath
-        )
+        getReadableStoredFileName(molba.urlPath) || path.basename(fullPath)
       );
 
     } catch (error) {
@@ -5251,3 +5959,47 @@ exports.downloadStudentDocument =
       );
     }
   };
+
+exports.editMolbaByStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const molba = await Molba.findByPk(id);
+
+    if (!molba) {
+      req.flash('error_msg', 'Молбата не е пронајдена.');
+      return res.redirect('/dashboard');
+    }
+
+    if (req.user.userId !== molba.userId) {
+      req.flash('error_msg', 'Немате овластување за да ја менувате оваа молба.');
+      return res.redirect('/dashboard');
+    }
+
+    if (molba.status !== 'Забелешка') {
+      req.flash('error_msg', 'Молбата не може да се менува во оваа фаза.');
+      return res.redirect(`/molbi/${id}`);
+    }
+
+    molba.naslov = req.body.naslov || molba.naslov;
+    molba.description = req.body.description || molba.description;
+    molba.semestar = req.body.semestar || molba.semestar;
+    molba.ucebna_godina = req.body.ucebna_godina || molba.ucebna_godina;
+    molba.smer = req.body.smer || molba.smer;
+
+    if (req.file) {
+      molba.url_path = req.file.path;
+    }
+
+    molba.status = 'Во процес';
+    molba.workflow_stage = 'SERVICE_REVIEWED';
+
+    await molba.save();
+
+    req.flash('success_msg', 'Успешно ја изменивте молбата. Испратена е повторно до Продеканот.');
+    res.redirect(`/molbi/${id}`);
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Грешка при измена на молбата.');
+    res.redirect('/dashboard');
+  }
+};

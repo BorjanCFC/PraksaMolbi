@@ -2233,3 +2233,2213 @@ nav {
   }
 }
 /* /MOLBI_ADMIN_DETAIL_NAV_BUTTONS_V1 */
+
+/* MOLBI_STUDENT_REVISION_V1 */
+.status-zabeleshka {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-color: #c4b5fd;
+}
+
+.stat-zabeleshka {
+  border-left-color: #7c3aed;
+}
+
+.student-revision-card {
+  margin-top: 1.25rem;
+}
+
+/* MOLBI_INLINE_REVISION_UI_V2 */
+.detail-row-editable {
+  align-items: flex-start;
+}
+
+.detail-edit-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-input,
+.detail-textarea,
+.detail-file-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.locked-input {
+  background: #eef2f7 !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
+  cursor: not-allowed;
+}
+
+.student-revision-feedback-box {
+  margin-bottom: 1rem;
+}
+
+.document-editor-section {
+  margin-top: 1.25rem;
+}
+
+.document-panel {
+  border: 1px solid #d9e2ec;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.document-panel-header {
+  font-weight: 700;
+  color: #0f3d75;
+  margin-bottom: 0.85rem;
+}
+
+.document-item-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.document-item-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.document-file-name {
+  font-weight: 700;
+  color: #1e293b;
+  word-break: break-word;
+}
+
+.document-file-subtitle {
+  color: #64748b;
+  font-size: 0.94rem;
+  margin-top: 0.2rem;
+}
+
+.document-item-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.document-remove-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.document-empty-state {
+  padding: 0.95rem 1rem;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+}
+
+.student-revision-actions {
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .document-item-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* =========================================================
+   MOLBI_PROFESSIONAL_REVISION_UI_V3
+   Professional request-details / student revision interface
+========================================================= */
+.professional-detail-card {
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+  overflow: visible;
+}
+
+.detail-top-back {
+  max-width: 980px;
+  margin: 0 auto 1rem;
+}
+
+.professional-detail-header {
+  align-items: center;
+  padding-bottom: 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.detail-eyebrow {
+  margin-bottom: 0.25rem;
+  color: #718096;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.detail-form-section {
+  padding: 1.35rem 0;
+  border-top: 1px solid #e6edf5;
+}
+
+.detail-form-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.detail-form-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.detail-form-section-heading h3 {
+  margin: 0;
+  color: #064b8e;
+  font-size: 1.15rem;
+}
+
+.detail-form-section-heading span {
+  color: #8191a5;
+  font-size: 0.88rem;
+}
+
+.professional-detail-grid {
+  display: block;
+}
+
+.professional-revision-form .detail-row {
+  display: grid !important;
+  grid-template-columns: 220px minmax(0, 1fr) !important;
+  gap: 1.4rem !important;
+  align-items: center !important;
+  min-height: 66px;
+  padding: 0.65rem 0 !important;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.professional-revision-form .detail-row:last-child {
+  border-bottom: 0;
+}
+
+.professional-revision-form .detail-row > strong {
+  color: #596b7e;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.professional-static-value {
+  color: #243447;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.professional-revision-form .detail-edit-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.professional-revision-form .detail-input,
+.professional-revision-form .detail-textarea,
+.professional-revision-form select.detail-input {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+  font-size: 1rem !important;
+  color: #1f2937 !important;
+  background: #ffffff !important;
+  border: 1px solid #cfd9e5 !important;
+  border-radius: 10px !important;
+  outline: none !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
+}
+
+.professional-revision-form .detail-input,
+.professional-revision-form select.detail-input {
+  min-height: 48px !important;
+  padding: 0.72rem 0.9rem !important;
+}
+
+.professional-revision-form .detail-textarea {
+  display: block;
+  min-height: 245px !important;
+  padding: 1rem !important;
+  line-height: 1.6 !important;
+  resize: vertical !important;
+  white-space: pre-wrap;
+}
+
+.professional-revision-form .detail-input:focus,
+.professional-revision-form .detail-textarea:focus,
+.professional-revision-form select.detail-input:focus {
+  border-color: #1676c8 !important;
+  box-shadow: 0 0 0 3px rgba(22, 118, 200, 0.12) !important;
+}
+
+.professional-revision-form .locked-input,
+.professional-revision-form .locked-input:disabled {
+  background: #eef2f6 !important;
+  color: #77879a !important;
+  border-color: #d8e0e8 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
+
+.locked-help,
+.field-hint {
+  display: block;
+  margin-top: 0.4rem;
+  color: #8a9aad;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.student-note-card {
+  margin-bottom: 1.4rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #cfe1f4;
+  border-left: 4px solid #1676c8;
+  border-radius: 10px;
+  background: #f6faff;
+}
+
+.student-note-title {
+  color: #064b8e;
+  font-size: 0.94rem;
+  font-weight: 800;
+  margin-bottom: 0.45rem;
+}
+
+.student-note-text {
+  color: #334155;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.hidden-delete-form {
+  display: none !important;
+}
+
+.document-card,
+.document-empty-card,
+.pdf-upload-card {
+  border: 1px solid #d9e3ee;
+  border-radius: 12px;
+  background: #f9fbfd;
+}
+
+.document-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.05rem;
+  margin-bottom: 0.85rem;
+}
+
+.document-icon-box,
+.document-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 10px;
+  background: #e8f2fb;
+  color: #07569b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.archive-pdf-icon {
+  background: #edf7ef;
+  color: #25723b;
+}
+
+.document-item-meta {
+  min-width: 0;
+}
+
+.document-file-name {
+  color: #1f2f43;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.document-file-subtitle {
+  margin-top: 0.25rem;
+  color: #7a8ba0;
+  font-size: 0.88rem;
+}
+
+.document-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: nowrap;
+}
+
+.document-preview-btn {
+  min-height: 42px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.9rem !important;
+  border-radius: 9px !important;
+  white-space: nowrap;
+}
+
+.document-delete-btn {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  padding: 0;
+  border: 1px solid #dc2626;
+  border-radius: 9px;
+  background: #dc2626;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.document-delete-btn:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.document-delete-btn svg,
+.custom-file-button svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.document-empty-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.05rem;
+  margin-bottom: 0.85rem;
+  border-style: dashed;
+  background: #fbfcfe;
+}
+
+.document-empty-icon {
+  background: #f0f3f7;
+  color: #7b8794;
+}
+
+.document-empty-title {
+  color: #334155;
+  font-weight: 800;
+}
+
+.document-empty-subtitle {
+  margin-top: 0.2rem;
+  color: #8391a2;
+  font-size: 0.88rem;
+}
+
+.pdf-upload-card {
+  padding: 1rem 1.05rem;
+  background: #ffffff;
+}
+
+.pdf-upload-title {
+  margin-bottom: 0.75rem;
+  color: #164b7a;
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+.custom-file-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.custom-file-input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.custom-file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 42px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #1676c8;
+  border-radius: 9px;
+  background: #1676c8;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.custom-file-button:hover {
+  background: #0d5ea5;
+  border-color: #0d5ea5;
+}
+
+.selected-file-name {
+  min-width: 0;
+  color: #66778b;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.professional-save-actions {
+  justify-content: flex-end !important;
+  gap: 0.75rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid #e6edf5;
+}
+
+.professional-save-btn {
+  min-width: 180px;
+}
+
+.professional-readonly-info .detail-row {
+  min-height: 46px;
+}
+
+.readonly-document-card {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .professional-revision-form .detail-row {
+    grid-template-columns: 1fr !important;
+    gap: 0.45rem !important;
+    align-items: stretch !important;
+  }
+
+  .detail-form-section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .document-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .document-item-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .document-preview-btn {
+    flex: 1;
+  }
+
+  .custom-file-picker {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .selected-file-name {
+    white-space: normal;
+  }
+
+  .professional-save-actions {
+    flex-direction: column-reverse;
+  }
+
+  .professional-save-actions .btn,
+  .professional-save-btn {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   MOLBI_REVISION_UI_REFINEMENT_V4
+========================================================= */
+
+/* Grey document download button, matching the compact secondary action style. */
+.document-download-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 42px !important;
+  padding: 0.58rem 0.95rem !important;
+  border: 1px solid #c7d5e5 !important;
+  border-radius: 9px !important;
+  background: #eef4f9 !important;
+  color: #064b8e !important;
+  font-family: inherit !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.document-download-btn:hover {
+  background: #e3edf6 !important;
+  border-color: #b7c9db !important;
+  color: #043f78 !important;
+  transform: none !important;
+}
+
+/* Wider red action with visible label + trash icon. */
+.document-delete-btn {
+  width: auto !important;
+  min-width: 112px !important;
+  height: 42px !important;
+  padding: 0 0.9rem !important;
+  gap: 0.48rem !important;
+  font-family: inherit !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+.document-delete-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 18px !important;
+}
+
+/* The file picker intentionally reuses exactly the app primary-button colors. */
+.custom-file-button.btn.btn-primary {
+  min-height: 42px !important;
+  padding: 0.58rem 0.95rem !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+/* Neutralize V3's standalone color declarations so btn-primary remains source of truth. */
+.custom-file-button.btn.btn-primary,
+.custom-file-button.btn.btn-primary:hover {
+  border-radius: 9px !important;
+}
+
+/* Locked fields (Student, Email, Date, Archive number) share one consistent visual. */
+.professional-revision-form .locked-input,
+.professional-revision-form .locked-input:disabled {
+  min-height: 48px !important;
+  padding: 0.72rem 0.9rem !important;
+  background: #eef2f6 !important;
+  color: #77879a !important;
+  border: 1px solid #d8e0e8 !important;
+  border-radius: 10px !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  -webkit-text-fill-color: #77879a !important;
+}
+
+@media (max-width: 720px) {
+  .document-item-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .document-download-btn,
+  .document-delete-btn {
+    min-height: 42px !important;
+  }
+}
+
+/* =========================================================
+   MOLBI_REVISION_UI_POLISH_V5
+========================================================= */
+
+/*
+ * The picker deliberately does NOT set background/border colors.
+ * Its btn btn-primary classes remain the only color source, so it
+ * has exactly the same primary/navy color as "Зачувај промени".
+ */
+.pdf-picker-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  min-height: 42px !important;
+  padding: 0.58rem 0.95rem !important;
+  margin: 0 !important;
+  border-radius: 9px !important;
+  font-family: inherit !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+.pdf-picker-primary svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 20px !important;
+  fill: currentColor !important;
+}
+
+/*
+ * Softer destructive action: clear enough to communicate deletion,
+ * but visually calmer than the previous solid-red trash button.
+ */
+.document-delete-btn.document-delete-text-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 148px !important;
+  height: 42px !important;
+  padding: 0 1rem !important;
+  gap: 0 !important;
+  border: 1px solid #efb4b4 !important;
+  border-radius: 9px !important;
+  background: #fff5f5 !important;
+  color: #b42318 !important;
+  font-family: inherit !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease !important;
+}
+
+.document-delete-btn.document-delete-text-btn:hover {
+  background: #fee7e7 !important;
+  border-color: #e79a9a !important;
+  color: #991b1b !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.document-delete-btn.document-delete-text-btn:focus-visible {
+  outline: 3px solid rgba(180, 35, 24, 0.16) !important;
+  outline-offset: 2px !important;
+}
+
+@media (max-width: 720px) {
+  .pdf-picker-primary,
+  .document-delete-btn.document-delete-text-btn {
+    min-height: 42px !important;
+  }
+}
+
+
+/* FINAL_DELETE_GHOST_STYLE */
+.document-delete-btn.document-delete-text-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  padding: 0 12px !important;
+
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 9px !important;
+
+  color: #dc2626 !important;
+  font-family: inherit !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+
+  box-shadow: none !important;
+  cursor: pointer !important;
+
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease !important;
+}
+
+.document-delete-btn.document-delete-text-btn:hover {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #b91c1c !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.document-delete-btn.document-delete-text-btn:active {
+  background: #fee2e2 !important;
+}
+
+.document-delete-btn.document-delete-text-btn .delete-icon {
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+/* FINAL_DELETE_BUTTON_V6_START */
+
+/*
+ * FINAL ghost delete button.
+ *
+ * Намерно има посилни правила со !important затоа што
+ * претходните V3/V4/V5 стилови содржат правила за
+ * .document-delete-btn што инаку можат да го стеснат копчето.
+ */
+
+.document-item-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+
+  flex-wrap: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   DELETE BUTTON
+--------------------------------------------------------- */
+
+.document-delete-btn.document-delete-ghost-btn {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 7px !important;
+
+  flex: 0 0 auto !important;
+
+  width: auto !important;
+  min-width: 108px !important;
+  max-width: none !important;
+
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+
+  padding: 0 14px !important;
+  margin: 0 !important;
+
+  box-sizing: border-box !important;
+
+  background: transparent !important;
+
+  border: 1px solid #efb1b1 !important;
+  border-radius: 10px !important;
+
+  color: #d12727 !important;
+
+  font-family: inherit !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+
+  line-height: 1 !important;
+  text-align: center !important;
+
+  white-space: nowrap !important;
+
+  overflow: visible !important;
+
+  cursor: pointer !important;
+
+  box-shadow: none !important;
+
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease !important;
+}
+
+
+/* ---------------------------------------------------------
+   ICON
+--------------------------------------------------------- */
+
+.document-delete-btn.document-delete-ghost-btn
+.document-delete-icon {
+
+  display: block !important;
+
+  width: 17px !important;
+  height: 17px !important;
+
+  min-width: 17px !important;
+  min-height: 17px !important;
+
+  flex: 0 0 17px !important;
+
+  fill: none !important;
+
+  stroke: currentColor !important;
+  stroke-width: 1.8 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+
+/* ---------------------------------------------------------
+   TEXT
+--------------------------------------------------------- */
+
+.document-delete-btn.document-delete-ghost-btn span {
+  display: inline-block !important;
+
+  width: auto !important;
+  min-width: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: inherit !important;
+
+  font: inherit !important;
+
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+
+  overflow: visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   HOVER
+--------------------------------------------------------- */
+
+.document-delete-btn.document-delete-ghost-btn:hover {
+  background: #fff4f4 !important;
+
+  border-color: #e77878 !important;
+
+  color: #b91c1c !important;
+
+  box-shadow: none !important;
+
+  transform: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   ACTIVE
+--------------------------------------------------------- */
+
+.document-delete-btn.document-delete-ghost-btn:active {
+  background: #fee8e8 !important;
+
+  border-color: #dc5d5d !important;
+
+  color: #991b1b !important;
+
+  transform: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   KEYBOARD FOCUS
+--------------------------------------------------------- */
+
+.document-delete-btn.document-delete-ghost-btn:focus {
+  outline: none !important;
+}
+
+.document-delete-btn.document-delete-ghost-btn:focus-visible {
+  outline: 3px solid rgba(209, 39, 39, 0.16) !important;
+
+  outline-offset: 2px !important;
+}
+
+
+/* ---------------------------------------------------------
+   MOBILE
+--------------------------------------------------------- */
+
+@media (max-width: 720px) {
+
+  .document-item-actions {
+    flex-wrap: wrap !important;
+  }
+
+  .document-delete-btn.document-delete-ghost-btn {
+    min-width: 108px !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+
+    padding: 0 13px !important;
+  }
+}
+
+/* FINAL_DELETE_BUTTON_V6_END */
+
+/* =========================================================
+   MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1
+========================================================= */
+
+.archive-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #d7e2ee;
+  border-radius: 999px;
+  background: #f7fafc;
+  color: #0a4d87 !important;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.archive-nav-link:hover {
+  background: #edf5fb;
+  border-color: #bdd1e5;
+}
+
+.current-academic-period-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.1rem 0 1.5rem;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid #d8e4ef;
+  border-radius: 14px;
+  background: #f8fbfe;
+}
+
+.current-academic-period-banner > div {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.current-period-label {
+  color: #718096;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.current-academic-period-banner strong {
+  color: #064b8e;
+  font-size: 1rem;
+}
+
+.current-academic-period-banner.period-missing {
+  background: #fff9ed;
+  border-color: #f4d9a4;
+}
+
+.current-academic-period-banner.period-missing strong {
+  color: #9a5b00;
+}
+
+.academic-period-admin-card {
+  margin: 1.5rem 0;
+  padding: 1.35rem 1.45rem;
+  border: 1px solid #d9e5ef;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(14, 61, 101, 0.06);
+}
+
+.academic-period-admin-heading h3 {
+  margin: 0;
+  color: #064b8e;
+  font-size: 1.18rem;
+}
+
+.academic-period-admin-heading p {
+  margin: 0.35rem 0 0;
+  color: #708196;
+}
+
+.academic-period-open-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #cfe5d5;
+  border-radius: 13px;
+  background: #f4fbf6;
+}
+
+.academic-period-open-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.academic-period-status-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #2f9e57;
+  box-shadow: 0 0 0 5px rgba(47, 158, 87, 0.12);
+}
+
+.academic-period-open-info div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.academic-period-open-info span {
+  color: #688078;
+  font-size: 0.86rem;
+}
+
+.academic-period-open-info strong {
+  color: #1f5f38;
+  font-size: 1.05rem;
+}
+
+.academic-period-close-btn {
+  border: 1px solid #dfb2b2 !important;
+  background: #fff7f7 !important;
+  color: #b62929 !important;
+}
+
+.academic-period-close-btn:hover {
+  background: #ffeded !important;
+}
+
+.academic-period-create-state {
+  margin-top: 1rem;
+}
+
+.academic-period-no-open {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  color: #6f7f90;
+}
+
+.academic-period-no-open strong {
+  color: #9a5b00;
+}
+
+.academic-period-open-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.academic-period-open-form .form-group {
+  margin: 0;
+}
+
+.academic-period-open-action {
+  display: flex;
+}
+
+.academic-period-locked-input,
+.academic-period-locked-input:disabled {
+  background: #edf2f7 !important;
+  color: #5f7185 !important;
+  border-color: #d5e0ea !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  font-weight: 600;
+}
+
+.academic-period-closed-notice {
+  margin: 1rem 0;
+  padding: 1.2rem 1.3rem;
+  border: 1px solid #f1d39a;
+  border-radius: 14px;
+  background: #fff9ec;
+}
+
+.academic-period-closed-title {
+  margin-bottom: 0.35rem;
+  color: #8a5200;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.academic-period-closed-notice p {
+  margin: 0;
+  color: #806a48;
+}
+
+.academic-archive-page {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.archive-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.archive-page-heading h2 {
+  margin: 0.2rem 0 0.35rem;
+  color: #064b8e;
+}
+
+.archive-page-heading p {
+  margin: 0;
+  color: #6f8093;
+}
+
+.archive-page-eyebrow {
+  color: #8495a8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.archive-period-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.archive-period-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.2rem;
+  border: 1px solid #d9e5ef;
+  border-radius: 15px;
+  background: #ffffff;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(14, 61, 101, 0.05);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.archive-period-card:hover {
+  transform: translateY(-1px);
+  border-color: #b7cee3;
+  box-shadow: 0 12px 28px rgba(14, 61, 101, 0.09);
+}
+
+.archive-period-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 13px;
+  background: #eaf3fb;
+  color: #07579c;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.archive-period-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.archive-period-title {
+  color: #22364a;
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.archive-period-meta {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+  color: #7b8da0;
+  font-size: 0.86rem;
+}
+
+.archive-period-open {
+  color: #0a5ba3;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.archive-empty-state {
+  padding: 2rem;
+  border: 1px dashed #c8d8e6;
+  border-radius: 16px;
+  background: #f9fbfd;
+  text-align: center;
+  color: #708196;
+}
+
+.archive-empty-state h3 {
+  margin-top: 0;
+  color: #28445f;
+}
+
+.archive-summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.4rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid #d9e5ef;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.archive-summary-card > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+}
+
+.archive-summary-label {
+  color: #718297;
+  font-weight: 600;
+}
+
+.archive-summary-card strong {
+  color: #064b8e;
+  font-size: 1.35rem;
+}
+
+.archive-readonly-badge {
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: #eef3f7;
+  color: #66788a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.archive-all-heading {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 850px) {
+  .academic-period-open-form {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-period-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-page-heading,
+  .academic-period-open-state,
+  .current-academic-period-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+/* =========================================================
+   MOLBI_ACADEMIC_PERIOD_ARCHIVE_REFINEMENTS_V2
+========================================================= */
+
+.current-academic-period-banner.period-missing {
+  justify-content: space-between;
+}
+
+.current-academic-period-banner.period-missing > div {
+  min-height: 24px;
+}
+
+.current-academic-period-banner.period-missing strong {
+  display: none;
+}
+
+.academic-period-open-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  align-items: end;
+}
+
+.academic-period-open-form .form-group:first-child {
+  grid-column: 1 / -1;
+}
+
+.academic-period-open-form .form-group:nth-child(2) {
+  grid-column: 1 / 2;
+}
+
+.academic-period-open-form .academic-period-open-action {
+  grid-column: 2 / 3;
+  justify-content: flex-end;
+  align-self: end;
+}
+
+.academic-period-open-form .academic-period-open-action .btn {
+  min-width: 220px;
+}
+
+.archive-semester-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.archive-semester-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.archive-semester-column-title {
+  margin-bottom: 0.1rem;
+  color: #064b8e;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
+.archive-empty-mini {
+  padding: 1rem 1.1rem;
+  border: 1px dashed #c8d8e6;
+  border-radius: 14px;
+  background: #f9fbfd;
+  color: #708196;
+}
+
+.archive-semester-column-winter .archive-period-card {
+  border-top: 4px solid #2d5fa8;
+}
+
+.archive-semester-column-summer .archive-period-card {
+  border-top: 4px solid #f08c00;
+}
+
+@media (max-width: 850px) {
+  .academic-period-open-form {
+    grid-template-columns: 1fr;
+  }
+
+  .academic-period-open-form .form-group:first-child,
+  .academic-period-open-form .form-group:nth-child(2),
+  .academic-period-open-form .academic-period-open-action {
+    grid-column: auto;
+  }
+
+  .academic-period-open-form .academic-period-open-action {
+    justify-content: stretch;
+  }
+
+  .academic-period-open-form .academic-period-open-action .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .archive-semester-columns {
+    grid-template-columns: 1fr;
+  }
+  
+  .archive-semester-column {
+    gap: 0.85rem;
+  }
+}
+
+
+
+
+
+/*
+ * ?? ?? ???????? ??????? grid/flex layout.
+ * ?? ??????? ?????? .detail-row ???????? ???? ???? ????? ??????.
+ */
+.semester-year-detail-row strong {
+  font-size: 0.88rem !important;
+  white-space: nowrap !important;
+}
+
+/* ????????? ?? ????????? ?????? ??????? ???? ??????? detail-row ????????? */
+.semester-year-detail-row span {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+
+/* SEMESTER_YEAR_DETAIL_ALIGNMENT_FINAL */
+
+/*
+ * ???? readonly ?????? ????? ???? ???? ??????.
+ * ???? Email, ??????, ??????, ????????, ?????? ???.
+ * ??????????? ????? ?? ???? ?????????? ??????.
+ */
+.professional-readonly-info .detail-row {
+    display: grid !important;
+    grid-template-columns: 250px minmax(0, 1fr) !important;
+    column-gap: 16px !important;
+    align-items: center !important;
+}
+
+.professional-readonly-info .detail-row > strong {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    line-height: 1.3 !important;
+}
+
+/* ???? ??????? label ???? ? ??????? ????? */
+.professional-readonly-info .detail-row > strong:first-child {
+    white-space: nowrap !important;
+}
+
+.professional-readonly-info .detail-row > span {
+    width: auto !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    justify-self: start !important;
+}
+
+/* ???????? / ?????? ?????? */
+.professional-readonly-info
+.detail-row:has(> strong:first-child) {
+    box-sizing: border-box !important;
+}
+
+/* ?? ????? ????? ???????? ???? ??? ???? */
+@media (max-width: 700px) {
+    .professional-readonly-info .detail-row {
+        grid-template-columns: 1fr !important;
+        row-gap: 7px !important;
+    }
+}
+
+
+
+/* STUDENT_PERIOD_FILTER_FIX_START */
+
+/*
+ * Keep this native select on its normal browser layer.
+ * The global .form-select:focus transform can produce a large
+ * white popup/compositor artifact in Chromium-based browsers.
+ */
+#semesterYearFilterStudent.student-period-filter,
+#semesterYearFilterStudent.student-period-filter:hover,
+#semesterYearFilterStudent.student-period-filter:focus,
+#semesterYearFilterStudent.student-period-filter:active {
+    transform: none !important;
+    translate: none !important;
+    scale: none !important;
+
+    position: static !important;
+    z-index: auto !important;
+
+    box-shadow: none !important;
+
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+
+    overflow: visible !important;
+}
+
+#semesterYearFilterStudent.student-period-filter:focus {
+    outline: 2px solid rgba(0, 112, 201, 0.35) !important;
+    outline-offset: 1px !important;
+
+    border-color: var(--accent) !important;
+}
+
+/* Prevent the filter group itself from creating a popup layer. */
+#semesterYearFilterStudent.student-period-filter,
+#semesterYearFilterStudent.student-period-filter option {
+    filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.student-period-filter-group {
+    transform: none !important;
+    filter: none !important;
+    overflow: visible !important;
+}
+
+/* STUDENT_PERIOD_FILTER_FIX_END */
+
+/* STUDENT_FILTER_FINAL_LAYOUT_START */
+
+
+/* =========================================================
+   STUDENT FILTER BAR
+   Row 1:
+   Status | Semester/Year | From | To
+
+   Row 2:
+   Apply | Clear
+========================================================= */
+
+.filter-bar:has(#statusFilterStudent) {
+    display: grid !important;
+
+    grid-template-columns:
+        max-content
+        max-content
+        max-content
+        max-content !important;
+
+    grid-template-rows:
+        auto
+        auto !important;
+
+    column-gap: 20px !important;
+    row-gap: 14px !important;
+
+    align-items: center !important;
+    justify-content: start !important;
+
+    padding: 16px 24px !important;
+
+    overflow: visible !important;
+
+    transform: none !important;
+    filter: none !important;
+}
+
+
+/* Individual groups */
+
+.filter-bar:has(#statusFilterStudent) .filter-group {
+    display: flex !important;
+
+    align-items: center !important;
+
+    gap: 8px !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+
+    overflow: visible !important;
+
+    transform: none !important;
+}
+
+
+/* Labels */
+
+.filter-bar:has(#statusFilterStudent) .filter-group label {
+    margin: 0 !important;
+
+    font-size: 13px !important;
+    font-weight: 700 !important;
+
+    line-height: 1.2 !important;
+
+    white-space: nowrap !important;
+}
+
+
+/* =========================================================
+   COMPACT CONTROL WIDTHS
+========================================================= */
+
+#statusFilterStudent {
+    width: 160px !important;
+    min-width: 160px !important;
+    max-width: 160px !important;
+}
+
+#semesterYearFilterStudent {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+}
+
+#fromDateStudent,
+#toDateStudent {
+    width: 175px !important;
+    min-width: 175px !important;
+    max-width: 175px !important;
+}
+
+
+/* Compact common appearance */
+
+#statusFilterStudent,
+#semesterYearFilterStudent,
+#fromDateStudent,
+#toDateStudent {
+    height: 42px !important;
+
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+
+    font-size: 13px !important;
+
+    box-sizing: border-box !important;
+}
+
+
+/* =========================================================
+   FIX CHROMIUM / BRAVE SELECT POPUP ARTIFACT
+
+   The global .form-select:focus uses transform:
+   translateY(-1px). Native select popup + transformed
+   element can create the large white compositor rectangle.
+========================================================= */
+
+#statusFilterStudent,
+#statusFilterStudent:hover,
+#statusFilterStudent:focus,
+#statusFilterStudent:active,
+
+#semesterYearFilterStudent,
+#semesterYearFilterStudent:hover,
+#semesterYearFilterStudent:focus,
+#semesterYearFilterStudent:active {
+
+    transform: none !important;
+    translate: none !important;
+    scale: none !important;
+
+    filter: none !important;
+    backdrop-filter: none !important;
+
+    perspective: none !important;
+
+    will-change: auto !important;
+
+    contain: none !important;
+
+    position: static !important;
+
+    z-index: auto !important;
+
+    overflow: visible !important;
+
+    appearance: auto !important;
+    -webkit-appearance: menulist !important;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease !important;
+}
+
+
+#statusFilterStudent:focus,
+#semesterYearFilterStudent:focus {
+
+    outline: none !important;
+
+    border-color: #1594e8 !important;
+
+    box-shadow:
+        0 0 0 3px rgba(21, 148, 232, 0.16) !important;
+}
+
+
+/* Native options should not inherit visual effects */
+
+#statusFilterStudent option,
+#semesterYearFilterStudent option {
+    transform: none !important;
+    filter: none !important;
+}
+
+
+/* =========================================================
+   SECOND ROW - BUTTONS ONLY
+========================================================= */
+
+.filter-bar:has(#statusFilterStudent) > button {
+    grid-row: 2 !important;
+
+    width: auto !important;
+    min-width: 100px !important;
+
+    height: 38px !important;
+
+    margin: 0 !important;
+
+    justify-self: start !important;
+}
+
+
+.filter-bar:has(#statusFilterStudent) > button:nth-of-type(1) {
+    grid-column: 1 !important;
+}
+
+
+.filter-bar:has(#statusFilterStudent) > button:nth-of-type(2) {
+    grid-column: 2 !important;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1200px) {
+
+    .filter-bar:has(#statusFilterStudent) {
+        grid-template-columns:
+            max-content
+            max-content !important;
+    }
+
+
+    .filter-bar:has(#statusFilterStudent) > button:nth-of-type(1) {
+        grid-column: 1 !important;
+        grid-row: 3 !important;
+    }
+
+
+    .filter-bar:has(#statusFilterStudent) > button:nth-of-type(2) {
+        grid-column: 2 !important;
+        grid-row: 3 !important;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .filter-bar:has(#statusFilterStudent) {
+        display: flex !important;
+
+        flex-direction: column !important;
+
+        align-items: stretch !important;
+    }
+
+
+    .filter-bar:has(#statusFilterStudent) .filter-group {
+        display: flex !important;
+
+        flex-direction: column !important;
+
+        align-items: stretch !important;
+    }
+
+
+    #statusFilterStudent,
+    #semesterYearFilterStudent,
+    #fromDateStudent,
+    #toDateStudent {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+
+    .filter-bar:has(#statusFilterStudent) > button {
+        width: 100% !important;
+    }
+}
+
+
+/* STUDENT_FILTER_FINAL_LAYOUT_END */
+
+
+/* STUDENT_FILTER_ALIGNMENT_V2_START */
+
+/*
+ * Four filters on the first row.
+ * Buttons grouped together on the second row.
+ */
+.filter-bar:has(#statusFilterStudent) {
+    display: grid !important;
+
+    grid-template-columns:
+        auto
+        auto
+        auto
+        auto !important;
+
+    grid-template-rows:
+        auto
+        auto !important;
+
+    column-gap: 22px !important;
+    row-gap: 14px !important;
+
+    align-items: center !important;
+    justify-content: start !important;
+
+    overflow: visible !important;
+}
+
+
+/* Filter groups */
+.filter-bar:has(#statusFilterStudent) .filter-group {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 8px !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+}
+
+
+/* Labels */
+.filter-bar:has(#statusFilterStudent) .filter-group label {
+    display: block !important;
+
+    margin: 0 !important;
+
+    font-size: 13px !important;
+    font-weight: 700 !important;
+
+    line-height: 1.2 !important;
+
+    white-space: nowrap !important;
+}
+
+
+/* Compact widths */
+#statusFilterStudent {
+    width: 160px !important;
+}
+
+#semesterYearFilterStudent {
+    width: 200px !important;
+}
+
+#fromDateStudent,
+#toDateStudent {
+    width: 180px !important;
+}
+
+
+/* Keep controls consistent */
+#statusFilterStudent,
+#semesterYearFilterStudent,
+#fromDateStudent,
+#toDateStudent {
+    min-width: 0 !important;
+    height: 42px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 13px !important;
+}
+
+
+/* =========================================================
+   ACTION BUTTONS
+========================================================= */
+
+.student-filter-actions {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+
+    gap: 10px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+.student-filter-actions .btn {
+    width: auto !important;
+    min-width: 100px !important;
+
+    height: 38px !important;
+
+    margin: 0 !important;
+}
+
+
+/*
+ * Cancel older direct grid positioning rules that were
+ * previously applied to the buttons.
+ */
+.filter-bar:has(#statusFilterStudent) > button {
+    grid-column: auto !important;
+    grid-row: auto !important;
+}
+
+
+/* =========================================================
+   SELECT STABILITY
+========================================================= */
+
+#statusFilterStudent,
+#semesterYearFilterStudent,
+#statusFilterStudent:hover,
+#semesterYearFilterStudent:hover,
+#statusFilterStudent:focus,
+#semesterYearFilterStudent:focus,
+#statusFilterStudent:active,
+#semesterYearFilterStudent:active {
+    transform: none !important;
+    translate: none !important;
+    scale: none !important;
+
+    filter: none !important;
+    backdrop-filter: none !important;
+
+    will-change: auto !important;
+}
+
+
+/* Responsive */
+@media (max-width: 1100px) {
+
+    .filter-bar:has(#statusFilterStudent) {
+        grid-template-columns:
+            auto
+            auto !important;
+    }
+
+    .student-filter-actions {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .filter-bar:has(#statusFilterStudent) {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .filter-bar:has(#statusFilterStudent) .filter-group {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    #statusFilterStudent,
+    #semesterYearFilterStudent,
+    #fromDateStudent,
+    #toDateStudent {
+        width: 100% !important;
+    }
+
+    .student-filter-actions {
+        display: flex !important;
+        width: 100% !important;
+    }
+}
+
+/* STUDENT_FILTER_ALIGNMENT_V2_END */
+
+/* MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1 */
+
+/* =========================================================
+   MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1
+========================================================= */
+
+.archive-filter-bar {
+  margin: 1.35rem 0 1.6rem;
+}
+
+.archive-filter-actions,
+.student-directory-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.archive-filter-result-count {
+  color: #718096;
+  font-size: 0.95rem;
+}
+
+.students-admin-page,
+.student-admin-detail-page {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.students-page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.students-page-heading h2 {
+  margin: 0.15rem 0 0.3rem;
+}
+
+.students-page-heading p {
+  margin: 0;
+  color: #718096;
+}
+
+.students-summary-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #dbe6f0;
+  border-radius: 14px;
+  padding: 0.8rem 1.1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 8px 24px rgba(15, 70, 120, 0.06);
+  color: #64748b;
+  font-weight: 700;
+}
+
+.students-summary-card strong {
+  color: #064b8e;
+  font-size: 1.35rem;
+}
+
+.student-directory-filter-bar {
+  margin-bottom: 1.4rem;
+}
+
+.students-directory-card,
+.student-admin-detail-card {
+  background: #fff;
+  border: 1px solid #dbe6f0;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(15, 70, 120, 0.08);
+  overflow: hidden;
+}
+
+.students-directory-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem 1.35rem;
+  border-bottom: 1px solid #e7eef5;
+}
+
+.students-directory-card-heading h3 {
+  margin: 0;
+  color: #064b8e;
+}
+
+.students-directory-card-heading span {
+  color: #718096;
+}
+
+.students-directory-table strong {
+  color: #24384d;
+}
+
+.student-detail-topbar {
+  margin-bottom: 1rem;
+}
+
+.student-admin-detail-card {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.7rem;
+}
+
+.student-admin-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.2rem;
+  margin-bottom: 1.4rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.student-admin-detail-heading h2 {
+  margin: 0.25rem 0 0;
+  color: #064b8e;
+}
+
+.student-index-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: #edf5fc;
+  color: #064b8e;
+  font-weight: 800;
+  border: 1px solid #d2e3f2;
+}
+
+.student-admin-edit-form .locked-input {
+  background: #edf2f7 !important;
+  color: #718096 !important;
+  cursor: not-allowed;
+}
+
+.student-admin-detail-note {
+  margin-top: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #f7fafc;
+  color: #718096;
+  font-size: 0.92rem;
+}
+
+.student-admin-detail-actions {
+  margin-top: 1.4rem;
+}
+
+.students-nav-link {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .students-page-heading,
+  .student-admin-detail-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .archive-filter-actions,
+  .student-directory-filter-actions {
+    width: 100%;
+  }
+}
+

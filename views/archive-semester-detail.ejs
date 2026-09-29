@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Архива - <%= period.semestar %> <%= period.ucebnaGodina %></title>
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/feitLogoBrowser.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header', { viewer, isImpersonating, getRoleLabel, convertNameToCyrillic }) %>
+
+  <!-- MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1 -->
+  <main class="container academic-archive-page">
+    <div class="archive-page-heading">
+      <div>
+        <div class="archive-page-eyebrow">Архивиран семестар</div>
+        <h2><%= period.semestar %> <%= period.ucebnaGodina %></h2>
+        <p>Овој семестар е затворен. Молбите се прикажуваат само за преглед.</p>
+      </div>
+      <a href="/dashboard/archive" class="btn btn-secondary">← Архива на молби</a>
+    </div>
+
+    <div class="archive-summary-card">
+      <div>
+        <span class="archive-summary-label">Вкупно молби</span>
+        <strong><%= totalMolbiCount %></strong>
+      </div>
+      <div class="archive-readonly-badge">Архивирано</div>
+    </div>
+
+    <div class="filter-bar archive-filter-bar">
+      <div class="filter-group">
+        <label for="archiveStatusFilter">Статус:</label>
+        <select id="archiveStatusFilter" class="form-select filter-select">
+          <option value="site" <%= currentStatus === 'site' ? 'selected' : '' %>>Сите</option>
+          <option value="Во процес" <%= currentStatus === 'Во процес' ? 'selected' : '' %>>Во процес</option>
+          <option value="Забелешка" <%= currentStatus === 'Забелешка' ? 'selected' : '' %>>Забелешка</option>
+          <option value="Одобрена" <%= currentStatus === 'Одобрена' ? 'selected' : '' %>>Одобрена</option>
+          <option value="Одбиена" <%= currentStatus === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="archiveSemesterFilter">Семестар:</label>
+        <select id="archiveSemesterFilter" class="form-select filter-select">
+          <option value="site" <%= currentSemestar === 'site' ? 'selected' : '' %>>Сите</option>
+          <option value="Зимски" <%= currentSemestar === 'Зимски' ? 'selected' : '' %>>Зимски</option>
+          <option value="Летен" <%= currentSemestar === 'Летен' ? 'selected' : '' %>>Летен</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="archiveAcademicYearFilter">Учебна година:</label>
+        <select id="archiveAcademicYearFilter" class="form-select filter-select">
+          <option value="site" <%= currentAcademicYear === 'site' ? 'selected' : '' %>>Сите</option>
+          <% academicYearOptions.forEach((year) => { %>
+            <option value="<%= year %>" <%= currentAcademicYear === year ? 'selected' : '' %>><%= year %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="archiveCiklusFilter">Циклус на студии:</label>
+        <select id="archiveCiklusFilter" class="form-select filter-select">
+          <option value="site" <%= currentCiklus === 'site' ? 'selected' : '' %>>Сите</option>
+          <option value="Прв" <%= currentCiklus === 'Прв' ? 'selected' : '' %>>Прв циклус</option>
+          <option value="Втор" <%= currentCiklus === 'Втор' ? 'selected' : '' %>>Втор циклус</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="archiveStudentIndexFilter">Бр. индекс:</label>
+        <input
+          id="archiveStudentIndexFilter"
+          class="form-select filter-select"
+          type="text"
+          value="<%= currentStudentIndex %>"
+          placeholder="Пр. 106/2022"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="filter-group">
+        <label for="archiveFromDate">Од датум:</label>
+        <input id="archiveFromDate" class="form-select filter-select" type="date" value="<%= currentFromDate %>">
+      </div>
+
+      <div class="filter-group">
+        <label for="archiveToDate">До датум:</label>
+        <input id="archiveToDate" class="form-select filter-select" type="date" value="<%= currentToDate %>">
+      </div>
+
+      <div class="archive-filter-actions">
+        <button type="button" class="btn btn-primary btn-small" onclick="applyArchiveFilters()">Примени</button>
+        <button type="button" class="btn btn-secondary btn-small" onclick="clearArchiveFilters()">Исчисти</button>
+      </div>
+    </div>
+
+    <script>
+      function applyArchiveFilters() {
+        const params = new URLSearchParams();
+        params.set('status', document.getElementById('archiveStatusFilter').value);
+        params.set('semestar', document.getElementById('archiveSemesterFilter').value);
+        params.set('ucebnaGodina', document.getElementById('archiveAcademicYearFilter').value);
+        params.set('ciklus', document.getElementById('archiveCiklusFilter').value);
+        params.set('studentIndex', document.getElementById('archiveStudentIndexFilter').value.trim());
+        params.set('fromDate', document.getElementById('archiveFromDate').value);
+        params.set('toDate', document.getElementById('archiveToDate').value);
+        window.location.href = '/dashboard/archive/<%= period.academicPeriodId %>?' + params.toString();
+      }
+
+      function clearArchiveFilters() {
+        window.location.href = '/dashboard/archive/<%= period.academicPeriodId %>?status=site&semestar=site&ucebnaGodina=site&ciklus=site&studentIndex=&fromDate=&toDate=';
+      }
+    </script>
+
+    <div class="dashboard-header archive-all-heading">
+      <div><h2>Сите молби</h2></div>
+      <% if (hasActiveFilters) { %>
+        <div class="archive-filter-result-count">Прикажани: <strong><%= molbi.length %></strong></div>
+      <% } %>
+    </div>
+
+    <% if (molbi.length === 0) { %>
+      <div class="archive-empty-state">
+        <h3><%= hasActiveFilters ? 'Нема молби што одговараат на применетите филтри' : 'Нема молби во овој семестар' %></h3>
+        <% if (hasActiveFilters) { %><p>Променете ги или исчистете ги филтрите.</p><% } %>
+      </div>
+    <% } else { %>
+      <div class="table-wrapper">
+        <table class="molbi-table">
+          <thead>
+            <tr>
+              <th>Студент</th>
+              <th>Бр. индекс</th>
+              <th>Архивски број</th>
+              <th>Наслов</th>
+              <th>Семестар / учебна година</th>
+              <th>Циклус</th>
+              <th>Датум</th>
+              <th>Статус</th>
+              <th>Акции</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% molbi.forEach((molba) => { %>
+              <tr>
+                <td><%= molba.student.ime %> <%= molba.student.prezime %></td>
+                <td><%= molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null) || '-' %></td>
+                <td><%= molba.arhivskiBroj || '-' %></td>
+                <td class="desc-cell"><%= (molba.naslov || 'Без наслов').substring(0, 70) %><%= (molba.naslov || '').length > 70 ? '...' : '' %></td>
+                <td><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></td>
+                <td><%= molba.ciklus ? molba.ciklus + ' циклус' : '—' %></td>
+                <td><%= formatDateMk(molba.datum) %></td>
+                <td>
+                  <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Забелешка' ? 'zabeleshka' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>"><%= molba.status %></span>
+                </td>
+                <td><a href="/dashboard/molba/<%= molba.molbaId %>?archivePeriod=<%= period.academicPeriodId %>" class="btn btn-small">Детали</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

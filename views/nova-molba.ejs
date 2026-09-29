@@ -10,10 +10,16 @@
 <body>
   <%- include('partials/header', { viewer, isImpersonating }) %>
 
+  <!-- MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1 -->
+  <!-- MOLBI_ACADEMIC_PERIOD_ARCHIVE_REFINEMENTS_V2 -->
   <main class="container">
+    <div class="detail-top-back">
+      <a href="/dashboard" class="btn btn-secondary">← Назад</a>
+    </div>
     <div class="form-card">
       <h2>Нова молба</h2>
       <p class="subtitle">Пополнете ги податоците, внесете го текстот на молбата и приложете еден PDF документ со потребните документи.</p>
+
       <div class="molba-sample-box">
         <div><strong>Пример за текст на молба</strong></div>
         <a href="/documents/urnek-molba.pdf" download="urnek-molba.pdf" class="btn btn-secondary">Преземи урнек (PDF)</a>
@@ -23,82 +29,97 @@
         <div class="alert alert-error"><%= error %></div>
       <% } %>
 
-      <form action="/dashboard/nova-molba" method="POST" enctype="multipart/form-data">
-        <div class="form-group">
-          <label for="naslov">Наслов на молбата</label>
-          <input id="naslov" name="naslov" type="text" maxlength="150" placeholder="Пр. Молба за 36 кредити" required>
+      <% if (!activeAcademicPeriod) { %>
+        <div class="academic-period-closed-notice">
+          <div class="academic-period-closed-title">Во моментот нема отворен семестар</div>
+          <p>Поднесувањето на молби е затворено, додека не се отвори нов тековен семестар.</p>
         </div>
-
-        <div class="form-group">
-          <label for="semestar">Семестар</label>
-          <select id="semestar" name="semestar" class="form-select" required>
-            <option value="" selected disabled>Изберете семестар</option>
-            <option value="Зимски">Зимски</option>
-            <option value="Летен">Летен</option>
-          </select>
+        <div class="form-actions">
+          <a href="/dashboard" class="btn btn-secondary">← Назад</a>
         </div>
-
-        <div class="form-group">
-          <label for="ucebnaGodina">Учебна година</label>
-          <input id="ucebnaGodina" name="ucebnaGodina" type="text" class="form-select" placeholder="Пр. 2025/2026" pattern="^\d{4}\/\d{4}$" maxlength="9" required>
-        </div>
-
-        <div class="form-group">
-          <label for="ciklus">Циклус на студии</label>
-          <select id="ciklus" name="ciklus" class="form-select" required>
-            <option value="" selected disabled>Изберете циклус</option>
-            <option value="Прв">Прв циклус</option>
-            <option value="Втор">Втор циклус</option>
-          </select>
-        </div>
-
-        <div class="form-row">
+      <% } else { %>
+        <form action="/dashboard/nova-molba" method="POST" enctype="multipart/form-data">
           <div class="form-group">
-            <label for="brIndeks">Број на индекс</label>
-            <input id="brIndeks" name="brIndeks" type="text" placeholder="Пр. 106/2022" required value="<%= studentProfile && studentProfile.brIndeks ? studentProfile.brIndeks : '' %>">
+            <label for="naslov">Наслов на молбата</label>
+            <input id="naslov" name="naslov" type="text" maxlength="150" placeholder="Пр. Молба за 36 кредити" required>
           </div>
 
           <div class="form-group">
-            <label for="smer">Насока</label>
-            <select
-              id="smer"
-              name="smer"
-              class="form-select"
-              required
+            <label for="academicPeriodDisplay">Семестар / учебна година</label>
+            <input
+              id="academicPeriodDisplay"
+              type="text"
+              value="<%= activeAcademicPeriod.semestar %> семестар — <%= activeAcademicPeriod.ucebnaGodina %>"
+              class="form-select academic-period-locked-input"
+              disabled
+              readonly
             >
-              <option value="">Изберете насока</option>
+          </div>
 
-              <% majorOptions.forEach((major) => { %>
-
-                <option
-                  value="<%= major %>"
-                  <%= studentProfile && studentProfile.smer === major ? 'selected' : '' %>
-                >
-                  <%= major %>
-                </option>
-
-              <% }) %>
-
+          <div class="form-group">
+            <label for="ciklus">Циклус на студии</label>
+            <select id="ciklus" name="ciklus" class="form-select" required>
+              <option value="" selected disabled>Изберете циклус</option>
+              <option value="Прв">Прв циклус</option>
+              <option value="Втор">Втор циклус</option>
             </select>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="description">Опис на молбата</label>
-          <textarea id="description" name="description" rows="6" placeholder="Внесете го текстот на молбата..." required></textarea>
-        </div>
+          <!-- MOLBI_INDEX_FROM_EMAIL_MANUAL_MAJOR_V1 -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="brIndeksLocked">Број на индекс</label>
+              <input
+                id="brIndeksLocked"
+                type="text"
+                value="<%= studentProfile && studentProfile.brIndeks ? studentProfile.brIndeks : 'Не е утврден' %>"
+                class="form-select academic-period-locked-input"
+                disabled
+                readonly
+              >
+            </div>
 
-        <div class="form-group">
-          <label for="document">Прилог (задолжително: PDF)</label>
-          <input id="document" name="document" type="file" accept=".pdf,application/pdf" required>
-          <small class="help-text molba-document-help">Прикачете <strong>еден PDF документ</strong> со сите потребни документи: доказ за платена административна такса, потпис или согласност од професор доколку се бара, како и дополнителни уплатници и потврди според видот на барањето. Максимална дозволена големина: <strong>15 MB</strong>.</small>
-        </div>
+            <!-- MOLBI_LOCK_MAJOR_AFTER_FIRST_REQUEST_V1 -->
+            <div class="form-group">
+              <label for="smer">Насока</label>
 
-        <div class="form-actions">
-          <a href="/dashboard" class="btn btn-secondary">Откажи</a>
-          <button type="submit" class="btn btn-primary">Испрати молба</button>
-        </div>
-      </form>
+              <% if (studentProfile && studentProfile.smer) { %>
+                <input
+                  id="smerLocked"
+                  type="text"
+                  value="<%= studentProfile.smer %>"
+                  class="form-select academic-period-locked-input"
+                  disabled
+                  readonly
+                >
+              <% } else { %>
+                <select id="smer" name="smer" class="form-select" required>
+                <option value="">Изберете насока</option>
+                <% majorOptions.forEach((major) => { %>
+                  <option value="<%= major %>" <%= studentProfile && studentProfile.smer === major ? 'selected' : '' %>><%= major %></option>
+                <% }) %>
+              </select>
+              <% } %>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Опис на молбата</label>
+            <textarea id="description" name="description" rows="6" placeholder="Внесете го текстот на молбата..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="document">Прилог (задолжително: PDF)</label>
+            <input id="document" name="document" type="file" accept=".pdf,application/pdf" required>
+            <small class="help-text molba-document-help">Прикачете <strong>еден PDF документ</strong> со сите потребни документи: доказ за платена административна такса, потпис или согласност од професор доколку се бара, како и дополнителни уплатници и потврди според видот на барањето. Максимална дозволена големина: <strong>15 MB</strong>.</small>
+          </div>
+
+          <div class="form-actions">
+            <a href="/dashboard" class="btn btn-secondary">Откажи</a>
+            <button type="submit" class="btn btn-primary">Испрати молба</button>
+          </div>
+        </form>
+      <% } %>
     </div>
   </main>
 

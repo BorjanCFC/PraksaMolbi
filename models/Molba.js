@@ -15,8 +15,26 @@ const Molba = sequelize.define('Molba', {
       key: 'userId'
     }
   },
+  // MOLBI_STUDENT_REQUEST_NUMBERING_PDF_NAMES_V1
+  studentMolbaBroj: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'student_molba_broj'
+  },
+  // MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1
+  academicPeriodId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+    field: 'academic_period_id',
+    references: {
+      model: 'academic_periods',
+      key: 'academic_period_id'
+    }
+  },
+  // MOLBI_STUDENT_REVISION_V1
   status: {
-    type: DataTypes.ENUM('Во процес', 'Одобрена', 'Одбиена'),
+    type: DataTypes.ENUM('Во процес', 'Забелешка', 'Одобрена', 'Одбиена'),
     defaultValue: 'Во процес',
     allowNull: false
   },
@@ -90,6 +108,7 @@ const Molba = sequelize.define('Molba', {
         'SUBMITTED',
         'ARCHIVED',
         'SERVICE_REVIEWED',
+        'STUDENT_REVISION',
         'DECIDED',
         'COMPLETED'
       ]]
@@ -133,7 +152,14 @@ const Molba = sequelize.define('Molba', {
   }
 }, {
   tableName: 'molbi',
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    {
+      name: 'molbi_user_student_molba_broj_unique',
+      unique: true,
+      fields: ['userId', 'student_molba_broj']
+    }
+  ]
 });
 
 module.exports = Molba;

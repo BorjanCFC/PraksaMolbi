@@ -26,6 +26,11 @@ const {
   generateStateToken
 } = require('../config/entraAuth');
 
+// MOLBI_INDEX_FROM_EMAIL_MANUAL_MAJOR_V1
+const {
+  syncStudentIndexFromEmail
+} = require('../utils/studentEmailIdentity');
+
 
 /* =========================================================
    CONSTANTS
@@ -135,6 +140,9 @@ const buildSessionUser = (
 
     brIndeks:
       user.studentProfile?.brIndeks || null,
+
+    smer:
+      user.studentProfile?.smer || null,
 
     roles: roleContexts.map(
       (roleContext) => ({
@@ -669,9 +677,18 @@ const handlePasswordLogin = async (
     }
 
 
+    const synchronizedLocalStudent =
+      await syncStudentIndexFromEmail(user);
+
+    const localStudentForSession =
+      synchronizedLocalStudent.parsed
+        ? await reloadUserWithRoles(user.userId)
+        : user;
+
+
     req.session.user =
       buildSessionUser(
-        user,
+        localStudentForSession,
         'student',
         'local'
       );
@@ -1495,6 +1512,21 @@ exports.microsoftCallback = async (
       });
 
 
+      user =
+        await reloadUserWithRoles(
+          user.userId
+        );
+    }
+
+
+    /*
+     * Extract ONLY the student index from the authenticated FEIT e-mail
+     * and persist it before the session is built. Major is student-selected.
+     */
+    const synchronizedMicrosoftStudent =
+      await syncStudentIndexFromEmail(user);
+
+    if (synchronizedMicrosoftStudent.parsed) {
       user =
         await reloadUserWithRoles(
           user.userId

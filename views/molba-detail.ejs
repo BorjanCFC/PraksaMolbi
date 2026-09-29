@@ -10,16 +10,15 @@
 <body>
   <%- include('partials/header', { viewer, isImpersonating }) %>
 
+  <!-- MOLBI_STUDENT_REVISION_V1 -->
+  <!-- MOLBI_INLINE_REVISION_UI_V2 -->
+  <!-- MOLBI_PROFESSIONAL_REVISION_UI_V3 -->
+  <!-- MOLBI_REVISION_UI_REFINEMENT_V4 -->
+  <!-- MOLBI_REVISION_UI_POLISH_V5 -->
   <main class="container molba-detail-page">
-  <!-- detail-dashboard-back-top -->
-  <div style="margin-bottom: 1rem;">
-    <a
-      href="/dashboard"
-      class="btn btn-secondary"
-    >
-      ← Назад
-    </a>
-  </div>
+    <div class="detail-top-back">
+      <a href="/dashboard" class="btn btn-secondary">← Назад</a>
+    </div>
 
     <% if (success && success.length > 0) { %>
       <div class="alert alert-success"><%= success %></div>
@@ -28,365 +27,366 @@
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
-    <div class="detail-card">
-      <div class="detail-header">
-        <h2>Молба #<%= molba.molbaId %></h2>
-        <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
+    <% const studentBrIndeks = molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : ''); %>
+    <% const studentSmer = molba.student.smer || (molba.student.studentProfile ? molba.student.studentProfile.smer : ''); %>
+    <% const currentDocumentName = getReadableStoredFileName(molba.urlPath); %>
+    <% const currentArchiveDocumentName = getReadableStoredFileName(molba.arhivaPdfPath); %>
+
+    <div class="detail-card professional-detail-card">
+      <div class="detail-header professional-detail-header">
+        <div>
+          <div class="detail-eyebrow">Детали за молба</div>
+          <!-- MOLBI_STUDENT_REQUEST_NUMBERING_PDF_NAMES_V1 -->
+          <h2>Молба #<%= molba.studentMolbaBroj || molba.molbaId %></h2>
+        </div>
+        <span class="status-badge status-<%= molba.status === 'Во процес' ? 'proces' : molba.status === 'Забелешка' ? 'zabeleshka' : molba.status === 'Одобрена' ? 'odobrena' : 'odbiena' %>">
           <%= molba.status %>
         </span>
       </div>
 
-      <div class="detail-info">
-        <div class="detail-row">
-          <strong>Студент:</strong>
-          <span>
-            <%= convertNameToCyrillic(molba.student.ime) %> <%= convertNameToCyrillic(molba.student.prezime) %>
-            <% const studentBrIndeks = molba.student.brIndeks || (molba.student.studentProfile ? molba.student.studentProfile.brIndeks : null); %>
-            <% if (studentBrIndeks) { %>
-              <span style="color: #000000c1; margin-left: 1rem;">
-                <%= studentBrIndeks %>
-              </span>
-            <% } %>
-          </span>
-        </div>
-        <div class="detail-row">
-          <strong>Email:</strong>
-          <span><%= molba.student.email %></span>
-        </div>
-        <div class="detail-row">
-          <strong>Датум на поднесување:</strong>
-          <span><%= formatDateMk(molba.datum) %></span>
-        </div>
-        <div class="detail-row">
-          <strong>Наслов:</strong>
-          <span><%= molba.naslov || 'Без наслов' %></span>
-        </div>
-        <% const studentSmer = molba.student.smer || (molba.student.studentProfile ? molba.student.studentProfile.smer : null); %>
-        <% if (studentSmer) { %>
-          <div class="detail-row">
-            <strong>Насока:</strong>
-            <span><%= studentSmer %></span>
+      <% if (canStudentRevise) { %>
+        <% if (molba.feedback) { %>
+          <div class="student-note-card">
+            <div class="student-note-title">Забелешка од продекан</div>
+            <div class="student-note-text"><%= molba.feedback %></div>
           </div>
         <% } %>
-        <div class="detail-row">
-          <strong>Семестар:</strong>
-          <span><%= molba.semestar %></span>
-        </div>
-        <div class="detail-row">
-          <strong>Учебна година:</strong>
-          <span><%= molba.ucebnaGodina || 'Нема податок' %></span>
-        </div>
-        <div class="detail-row">
-          <strong>Циклус на студии:</strong>
-          <span><%= molba.ciklus ? molba.ciklus + ' циклус' : 'Не е утврден (стара молба)' %></span>
-        </div>
-        <div class="detail-row">
-          <strong>Архивски број:</strong>
-          <span><%= molba.arhivskiBroj || 'Не е внесено' %></span>
-        </div>
-      </div>
 
-      <div class="detail-section">
-        <h3>Опис на молбата</h3>
-        <div class="detail-text detail-description-full"><%= molba.description %></div>
-      </div>
+        <% if (molba.urlPath) { %>
+          <form
+            id="deleteStudentPdfForm"
+            action="/dashboard/molba/<%= molba.molbaId %>/student-document/delete"
+            method="POST"
+            class="hidden-delete-form"
+          ></form>
+        <% } %>
 
-      <div class="detail-section">
-        <h3>Документи</h3>
-        <div class="doc-actions">
+        <form
+          action="/dashboard/molba/<%= molba.molbaId %>/student-revision"
+          method="POST"
+          enctype="multipart/form-data"
+          class="inline-revision-form professional-revision-form"
+        >
+          <section class="detail-form-section">
+            <div class="detail-form-section-heading">
+              <h3>Податоци за молбата</h3>
+            </div>
+
+            <div class="detail-info professional-detail-grid">
+              <div class="detail-row detail-row-editable">
+                <strong>Студент</strong>
+                <div class="detail-edit-control">
+                  <input
+                    type="text"
+                    value="<%= convertNameToCyrillic(molba.student.ime) %> <%= convertNameToCyrillic(molba.student.prezime) %>"
+                    class="detail-input locked-input"
+                    disabled
+                    readonly
+                  >
+                </div>
+              </div>
+
+              <div class="detail-row detail-row-editable">
+                <strong>Email</strong>
+                <div class="detail-edit-control">
+                  <input type="text" value="<%= molba.student.email %>" class="detail-input locked-input" disabled readonly>
+                </div>
+              </div>
+
+              <div class="detail-row detail-row-editable">
+                <strong>Датум на поднесување</strong>
+                <div class="detail-edit-control">
+                  <input
+                    type="text"
+                    value="<%= formatDateMk(molba.datum) %>"
+                    class="detail-input locked-input"
+                    disabled
+                    readonly
+                  >
+                </div>
+              </div>
+
+              <div class="detail-row detail-row-editable">
+                <strong>Наслов</strong>
+                <div class="detail-edit-control">
+                  <input name="naslov" type="text" maxlength="150" value="<%= molba.naslov || '' %>" class="detail-input" required>
+                </div>
+              </div>
+
+              <!-- MOLBI_INDEX_FROM_EMAIL_MANUAL_MAJOR_V1 -->
+              <div class="detail-row detail-row-editable">
+                <strong>Бр. индекс</strong>
+                <div class="detail-edit-control">
+                  <input
+                    type="text"
+                    value="<%= studentBrIndeks || 'Не е утврден' %>"
+                    class="detail-input locked-input"
+                    disabled
+                    readonly
+                  >
+                </div>
+              </div>
+
+              <div class="detail-row detail-row-editable">
+                <strong>Насока</strong>
+                <div class="detail-edit-control">
+                  <!-- MOLBI_LOCK_REVISION_MAJOR_V1 -->
+                  <input
+                    type="text"
+                    value="<%= studentSmer || '' %>"
+                    class="detail-input locked-input"
+                    disabled
+                    readonly
+                  >
+                </div>
+              </div>
+
+              <!-- MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1 -->
+              <div class="detail-row detail-row-editable">
+                <strong>Семестар / учебна година</strong>
+                <div class="detail-edit-control">
+                  <input
+                    type="text"
+                    value="<%= molba.semestar %> семестар — <%= molba.ucebnaGodina || '-' %>"
+                    class="detail-input locked-input"
+                    disabled
+                    readonly
+                  >
+                </div>
+              </div>
+
+              <div class="detail-row detail-row-editable">
+                <strong>Циклус на студии</strong>
+                <div class="detail-edit-control">
+                  <select name="ciklus" class="detail-input form-select" required>
+                    <option value="Прв" <%= molba.ciklus === 'Прв' ? 'selected' : '' %>>Прв циклус</option>
+                    <option value="Втор" <%= molba.ciklus === 'Втор' ? 'selected' : '' %>>Втор циклус</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="detail-row detail-row-editable">
+                <strong>Архивски број</strong>
+                <div class="detail-edit-control">
+                  <input type="text" value="<%= molba.arhivskiBroj || 'Не е внесено' %>" class="detail-input locked-input" disabled readonly>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-form-section description-edit-section">
+            <div class="detail-form-section-heading">
+              <h3>Опис на молбата</h3>
+            </div>
+            <textarea name="description" rows="10" class="detail-textarea" required><%= molba.description || '' %></textarea>
+          </section>
+
+          <section class="detail-form-section document-editor-section">
+            <div class="detail-form-section-heading">
+              <h3>Документи</h3>
+            </div>
+
+            <% if (molba.urlPath) { %>
+              <div class="document-card attached-document-card">
+                <div class="document-icon-box" aria-hidden="true">PDF</div>
+
+                <div class="document-item-meta">
+                  <div class="document-file-name"><%= currentDocumentName %></div>
+                  <div class="document-file-subtitle">Тековно прикачен PDF документ</div>
+                </div>
+
+                <div class="document-item-actions">
+                  <a href="/dashboard/molba/<%= molba.molbaId %>/document/student" class="btn btn-secondary document-download-btn">
+                    Симни приложен документ
+                  </a>
+                  <button
+                    type="submit"
+                    form="deleteStudentPdfForm"
+                    class="document-delete-btn document-delete-ghost-btn"
+                    title="Избриши документ"
+                    aria-label="Избриши документ"
+                  >
+                    <svg
+                      class="document-delete-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 7h16"></path>
+                      <path d="M9 7V4h6v3"></path>
+                      <path d="M18 7l-1 13H7L6 7"></path>
+                      <path d="M10 11v5"></path>
+                      <path d="M14 11v5"></path>
+                    </svg>
+
+                    <span>Избриши</span>
+                  </button>
+                </div>
+              </div>
+            <% } else { %>
+              <div class="document-empty-card">
+                <div class="document-empty-icon">PDF</div>
+                <div>
+                  <div class="document-empty-title">Немате прикачено PDF документ</div>
+                  <div class="document-empty-subtitle">Можете да прикачите нов документ подолу.</div>
+                </div>
+              </div>
+            <% } %>
+
+            <div class="pdf-upload-card">
+              <div class="pdf-upload-title">Прикачи нов PDF документ</div>
+              <div class="custom-file-picker">
+                <input
+                  id="revisionDocument"
+                  name="document"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  class="custom-file-input"
+                >
+                <label for="revisionDocument" class="btn btn-primary pdf-picker-primary">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3 7 8h3v6h4V8h3l-5-5ZM5 18v-3H3v5h18v-5h-2v3H5Z"/>
+                  </svg>
+                  Избери PDF
+                </label>
+                <span id="selectedPdfName" class="selected-file-name">Нема избрано документ</span>
+              </div>
+            </div>
+          </section>
+
+          <div class="form-actions student-revision-actions professional-save-actions">
+            <a href="/dashboard" class="btn btn-secondary">← Назад</a>
+            <button type="submit" class="btn btn-primary professional-save-btn">Зачувај промени</button>
+          </div>
+        </form>
+      <% } else { %>
+        <div class="detail-info professional-readonly-info">
+          <div class="detail-row">
+            <strong>Студент:</strong>
+            <span>
+              <%= convertNameToCyrillic(molba.student.ime) %> <%= convertNameToCyrillic(molba.student.prezime) %>
+              <% if (studentBrIndeks) { %>
+                <span style="color: #000000c1; margin-left: 1rem;"><%= studentBrIndeks %></span>
+              <% } %>
+            </span>
+          </div>
+          <div class="detail-row"><strong>Email:</strong><span><%= molba.student.email %></span></div>
+          <div class="detail-row"><strong>Датум на поднесување:</strong><span><%= formatDateMk(molba.datum) %></span></div>
+          <div class="detail-row"><strong>Наслов:</strong><span><%= molba.naslov || 'Без наслов' %></span></div>
+          <% if (studentSmer) { %><div class="detail-row"><strong>Насока:</strong><span><%= studentSmer %></span></div><% } %>
+          <div class="detail-row"><strong>Семестар / учебна година:</strong><span><%= molba.semestar %> / <%= molba.ucebnaGodina || '-' %></span></div>
+          <div class="detail-row"><strong>Циклус на студии:</strong><span><%= molba.ciklus ? molba.ciklus + ' циклус' : 'Не е утврден (стара молба)' %></span></div>
+          <div class="detail-row"><strong>Архивски број:</strong><span><%= molba.arhivskiBroj || 'Не е внесено' %></span></div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Опис на молбата</h3>
+          <div class="detail-text detail-description-full"><%= molba.description %></div>
+        </div>
+
+        <div class="detail-section document-editor-section">
+          <h3>Документи</h3>
+
           <% if (molba.urlPath) { %>
-            <a href="/dashboard/molba/<%= molba.molbaId %>/document/student" class="btn btn-small">Симни приложен документ</a>
+            <div class="document-card attached-document-card readonly-document-card">
+              <div class="document-icon-box" aria-hidden="true">PDF</div>
+              <div class="document-item-meta">
+                <div class="document-file-name"><%= currentDocumentName %></div>
+                <div class="document-file-subtitle">Приложен PDF документ</div>
+              </div>
+              <div class="document-item-actions">
+                <a href="/dashboard/molba/<%= molba.molbaId %>/document/student" class="btn btn-secondary document-download-btn">Симни приложен документ</a>
+              </div>
+            </div>
           <% } else { %>
-            <p class="subtitle">Нема приложен документ за оваа молба.</p>
+            <div class="document-empty-card">
+              <div class="document-empty-icon">PDF</div>
+              <div class="document-empty-title">Нема приложен PDF документ</div>
+            </div>
           <% } %>
 
           <% if (molba.arhivaPdfPath) { %>
-            <a href="/dashboard/molba/<%= molba.molbaId %>/document/archive" class="btn btn-small">Преглед/симни генериран PDF</a>
+            <div class="document-card attached-document-card readonly-document-card archive-document-card">
+              <div class="document-icon-box archive-pdf-icon" aria-hidden="true">PDF</div>
+              <div class="document-item-meta">
+                <div class="document-file-name"><%= currentArchiveDocumentName %></div>
+                <div class="document-file-subtitle">Генериран архивски PDF документ</div>
+              </div>
+              <div class="document-item-actions">
+                <a href="/dashboard/molba/<%= molba.molbaId %>/document/archive" class="btn btn-secondary document-download-btn">Симни генериран документ</a>
+              </div>
+            </div>
           <% } %>
         </div>
 
-  
-
-        <% if (canArchiveNumber) { %>
-
-          <div
-            class="workflow-inline-section archive-number-edit-section"
-          >
-
-            <h3 class="workflow-inline-title">
-              Архивски број
-            </h3>
-
-            <form
-              action="/dashboard/molba/<%= molba.molbaId %>/archive-number"
-              method="POST"
-              class="archive-number-form"
-            >
-
-              <div class="form-group">
-
-                <input
-                  type="text"
-                  id="arhivskiBroj"
-                  name="arhivskiBroj"
-                  value="<%= molba.arhivskiBroj || '' %>"
-                  required
-                >
-
-              </div>
-
-
-              <div class="form-actions">
-
-                <button
-                  type="submit"
-                  class="btn btn-primary"
-                >
-                  <%= molba.arhivskiBroj
-                    ? 'Зачувај измена'
-                    : 'Зачувај архивски број'
-                  %>
-                </button>
-
-              </div>
-
-            </form>
-
+        <% if (molba.feedback) { %>
+          <div class="detail-section feedback-section <%= molba.status === 'Одбиена' ? 'feedback-rejected' : 'feedback-approved' %>">
+            <h3><%= molba.status === 'Забелешка' ? 'Забелешка од продекан' : molba.status === 'Одбиена' ? 'Причина за одбивање' : 'Повратна информација' %></h3>
+            <p class="detail-text"><%= molba.feedback %></p>
           </div>
-
         <% } %>
-
-<!-- WORKFLOW_V2_COMPACT -->
-
-  <% if (
-       showInternalFeedback &&
-       (
-         molba.sluzhbaFeedback ||
-         molba.prodekanFeedback
-       )
-     ) { %>
-
-    <div
-      class="workflow-inline-section workflow-feedback-section"
-    >
-
-      <% if (molba.sluzhbaFeedback) { %>
-
-        <div class="workflow-feedback-item">
-
-          <div class="workflow-feedback-label">
-            Забелешка од студентска служба до продекан
-          </div>
-
-          <div class="workflow-feedback-text"><%= String(molba.sluzhbaFeedback || '').trim() %></div>
-
-        </div>
-
       <% } %>
-
-
-      <% if (molba.prodekanFeedback) { %>
-
-        <div class="workflow-feedback-item">
-
-          <div class="workflow-feedback-label">
-            Забелешка од продекан до студентска служба
-          </div>
-
-          <div class="workflow-feedback-text"><%= String(molba.prodekanFeedback || '').trim() %></div>
-
-        </div>
-
-      <% } %>
-
-    </div>
-
-  <% } %>
-
-
-  <!-- ===================================================
-       STUDENTSKA SLUZHBA
-  ==================================================== -->
-
-  <% if (canServiceReview) { %>
-
-    <div class="workflow-inline-section">
-
-      <h3 class="workflow-inline-title">
-        Забелешка за продекан
-      </h3>
-
-      <form
-        action="/dashboard/molba/<%= molba.molbaId %>/service-review"
-        method="POST"
-      >
-
-        <div class="form-group">
-
-          <textarea
-            id="sluzhbaFeedback"
-            name="sluzhbaFeedback"
-            rows="5"
-          ><%= molba.sluzhbaFeedback || '' %></textarea>
-
-        </div>
-
-
-        <div class="form-actions workflow-inline-actions">
-
-          <button
-            type="submit"
-            class="btn btn-primary"
-          >
-            Потврди проверка и испрати до продекан
-          </button>
-
-        </div>
-
-      </form>
-
-    </div>
-
-  <% } %>
-
-
-  <!-- ===================================================
-       PRODEKAN
-  ==================================================== -->
-
-  <% if (canProdekanDecide) { %>
-
-    <div class="workflow-inline-section">
-
-      <h3 class="workflow-inline-title">
-        Одлука на продекан
-      </h3>
-
-
-      <form
-        action="/dashboard/molba/<%= molba.molbaId %>/status"
-        method="POST"
-      >
-
-        <div class="form-group">
-
-          <label for="status">
-            Нов статус
-          </label>
-
-          <select
-            id="status"
-            name="status"
-            class="form-select"
-            required
-          >
-
-            <option value="">
-              Изберете одлука
-            </option>
-
-            <option
-              value="Одобрена"
-            >
-              Одобрена
-            </option>
-
-            <option
-              value="Одбиена"
-            >
-              Одбиена
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label for="feedback">
-            Повратна информација до студентот
-          </label>
-
-          <textarea
-            id="feedback"
-            name="feedback"
-            rows="5"
-          ><%= molba.feedback || '' %></textarea>
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label for="prodekanFeedback">
-            Забелешка до служба
-          </label>
-
-          <textarea
-            id="prodekanFeedback"
-            name="prodekanFeedback"
-            rows="5"
-          ><%= molba.prodekanFeedback || '' %></textarea>
-
-        </div>
-
-
-        <div class="form-actions workflow-inline-actions">
-
-          <button
-            type="submit"
-            class="btn btn-primary"
-          >
-            Зачувај одлука
-          </button>
-
-        </div>
-
-      </form>
-
-    </div>
-
-  <% } %>
-
-  <!-- /WORKFLOW_V2_COMPACT -->
-
-
-      </div>
 
       <% if (canArchiveNumber) { %>
-        
-      <% } %>
-
-
-      <% if (molba.feedback) { %>
-        <div class="detail-section feedback-section <%= molba.status === 'Одбиена' ? 'feedback-rejected' : 'feedback-approved' %>">
-          <h3><%= molba.status === 'Одбиена' ? 'Причина за одбивање' : 'Повратна информација' %></h3>
-          <p class="detail-text"><%= molba.feedback %></p>
+        <div class="workflow-inline-section archive-number-edit-section">
+          <h3 class="workflow-inline-title">Архивски број</h3>
+          <form action="/dashboard/molba/<%= molba.molbaId %>/archive-number" method="POST" class="archive-number-form">
+            <div class="form-group">
+              <input type="text" id="arhivskiBroj" name="arhivskiBroj" value="<%= molba.arhivskiBroj || '' %>" required>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary"><%= molba.arhivskiBroj ? 'Зачувај измена' : 'Зачувај архивски број' %></button>
+            </div>
+          </form>
+          <div class="detail-actions"><a href="/dashboard" class="btn btn-secondary">← Назад</a></div>
         </div>
       <% } %>
 
-      <% if (canManage) { %>
-        <div class="admin-action-card">
-          <h3>Обработка на молба</h3>
+      <% if (showInternalFeedback && (molba.sluzhbaFeedback || molba.prodekanFeedback)) { %>
+        <div class="workflow-inline-section workflow-feedback-section">
+          <% if (molba.sluzhbaFeedback) { %>
+            <div class="workflow-feedback-item">
+              <div class="workflow-feedback-label">Забелешка од студентска служба до продекан</div>
+              <div class="workflow-feedback-text"><%= String(molba.sluzhbaFeedback || '').trim() %></div>
+            </div>
+          <% } %>
+          <% if (molba.prodekanFeedback) { %>
+            <div class="workflow-feedback-item">
+              <div class="workflow-feedback-label">Забелешка од продекан до студентска служба</div>
+              <div class="workflow-feedback-text"><%= String(molba.prodekanFeedback || '').trim() %></div>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+
+      <% if (canServiceReview) { %>
+        <div class="workflow-inline-section">
+          <h3 class="workflow-inline-title">Забелешка за продекан</h3>
+          <form action="/dashboard/molba/<%= molba.molbaId %>/service-review" method="POST">
+            <div class="form-group"><textarea id="sluzhbaFeedback" name="sluzhbaFeedback" rows="5"><%= molba.sluzhbaFeedback || '' %></textarea></div>
+            <div class="form-actions workflow-inline-actions"><button type="submit" class="btn btn-primary">Потврди проверка и испрати до продекан</button></div>
+          </form>
+          <div class="detail-actions"><a href="/dashboard" class="btn btn-secondary">← Назад</a></div>
+        </div>
+      <% } %>
+
+      <% if (canProdekanDecide) { %>
+        <div class="workflow-inline-section">
+          <h3 class="workflow-inline-title">Одлука на продекан</h3>
           <form action="/dashboard/molba/<%= molba.molbaId %>/status" method="POST">
             <div class="form-group">
               <label for="status">Нов статус</label>
               <select id="status" name="status" class="form-select" required>
-                <option value="Во процес" <%= molba.status === 'Во процес' ? 'selected' : '' %>>Во процес</option>
-                <option value="Одобрена" <%= molba.status === 'Одобрена' ? 'selected' : '' %>>Одобрена</option>
-                <option value="Одбиена" <%= molba.status === 'Одбиена' ? 'selected' : '' %>>Одбиена</option>
+                <option value="">Изберете одлука</option>
+                <option value="Забелешка" <%= molba.status === 'Забелешка' ? 'selected' : '' %>>Забелешка</option>
+                <option value="Одобрена">Одобрена</option>
+                <option value="Одбиена">Одбиена</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="feedback">Повратна информација кон студентот</label>
-              <textarea id="feedback" name="feedback" rows="4" placeholder="Внесете причина или забелешка..."><%= molba.feedback || '' %></textarea>
-            </div>
-            <div class="form-actions">
-              <a href="/dashboard" class="btn btn-secondary">← Назад</a>
-              <button type="submit" class="btn btn-admin">Зачувај одлука</button>
-            </div>
+            <div class="form-group"><label for="feedback">Повратна информација до студентот</label><textarea id="feedback" name="feedback" rows="5"><%= molba.feedback || '' %></textarea></div>
+            <div class="form-group"><label for="prodekanFeedback">Забелешка до служба</label><textarea id="prodekanFeedback" name="prodekanFeedback" rows="5"><%= molba.prodekanFeedback || '' %></textarea></div>
+            <div class="form-actions workflow-inline-actions"><button type="submit" class="btn btn-primary">Зачувај одлука</button></div>
           </form>
+          <div class="detail-actions"><a href="/dashboard" class="btn btn-secondary">← Назад</a></div>
         </div>
       <% } %>
 
@@ -395,25 +395,34 @@
           <h3>Генерирање на PDF</h3>
           <p class="subtitle">Генерирај PDF документ за молбата.</p>
           <form action="/dashboard/molba/<%= molba.molbaId %>/generate-molba-pdf" method="POST">
-            <div class="form-actions">
-              <button type="submit" class="btn btn-admin">Генерирај PDF</button>
-            </div>
+            <div class="form-actions"><button type="submit" class="btn btn-admin">Генерирај PDF</button></div>
           </form>
         </div>
+        <div class="detail-actions"><a href="/dashboard" class="btn btn-secondary">← Назад</a></div>
       <% } %>
 
-      <% if (!canManage && !canGenerateMolbaPdf) { %>
-        <div class="detail-actions">
-          <a href="/dashboard" class="btn btn-secondary">← Назад</a>
-        </div>
+      <% if (!canStudentRevise && !canArchiveNumber && !canServiceReview && !canProdekanDecide && !canGenerateMolbaPdf) { %>
+        <div class="detail-actions"><a href="/dashboard" class="btn btn-secondary">← Назад</a></div>
       <% } %>
     </div>
-  
-  
-
-
   </main>
 
   <%- include('partials/footer') %>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const input = document.getElementById('revisionDocument');
+      const name = document.getElementById('selectedPdfName');
+
+      if (input && name) {
+        input.addEventListener('change', function () {
+          name.textContent = input.files && input.files.length > 0
+            ? input.files[0].name
+            : 'Нема избрано документ';
+        });
+      }
+    });
+  </script>
 </body>
 </html>
+

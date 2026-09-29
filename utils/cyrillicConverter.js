@@ -1,5 +1,7 @@
 /**
- * Convert Latin Macedonian names to Cyrillic
+ * Convert Latin Macedonian names to Cyrillic.
+ * Kept for backward compatibility with older user rows that may still
+ * contain Latin-script names.
  */
 const latinToCyrillic = {
   'A': 'А', 'a': 'а',
@@ -32,19 +34,13 @@ const latinToCyrillic = {
   'Zh': 'Ж', 'zh': 'ж'
 };
 
-/**
- * Convert a Macedonian name from Latin to Cyrillic script
- * @param {string} latinName - Name in Latin script
- * @returns {string} - Name converted to Cyrillic script
- */
 const convertNameToCyrillic = (latinName) => {
   if (!latinName) return latinName;
-  
+
   let cyrillic = '';
   let i = 0;
-  
+
   while (i < latinName.length) {
-    // Check for two-character combinations first (Dž, Lj, Nj, Č, Š, Ž, etc.)
     if (i + 1 < latinName.length) {
       const twoChar = latinName.substr(i, 2);
       if (latinToCyrillic[twoChar]) {
@@ -53,21 +49,67 @@ const convertNameToCyrillic = (latinName) => {
         continue;
       }
     }
-    
-    // Check single character
+
     const char = latinName[i];
-    if (latinToCyrillic[char]) {
-      cyrillic += latinToCyrillic[char];
-    } else {
-      // If no conversion found, keep the original character
-      cyrillic += char;
-    }
-    i++;
+    cyrillic += latinToCyrillic[char] || char;
+    i += 1;
   }
-  
+
   return cyrillic;
 };
 
+/* =========================================================
+   MOLBI_STUDENT_REQUEST_NUMBERING_PDF_NAMES_V1
+   Macedonian Cyrillic -> filesystem-friendly Latin ASCII
+========================================================= */
+const cyrillicToLatin = {
+  'А': 'A',  'а': 'a',
+  'Б': 'B',  'б': 'b',
+  'В': 'V',  'в': 'v',
+  'Г': 'G',  'г': 'g',
+  'Д': 'D',  'д': 'd',
+  'Ѓ': 'Gj', 'ѓ': 'gj',
+  'Е': 'E',  'е': 'e',
+  'Ж': 'Zh', 'ж': 'zh',
+  'З': 'Z',  'з': 'z',
+  'Ѕ': 'Dz', 'ѕ': 'dz',
+  'И': 'I',  'и': 'i',
+  'Ј': 'J',  'ј': 'j',
+  'К': 'K',  'к': 'k',
+  'Л': 'L',  'л': 'l',
+  'Љ': 'Lj', 'љ': 'lj',
+  'М': 'M',  'м': 'm',
+  'Н': 'N',  'н': 'n',
+  'Њ': 'Nj', 'њ': 'nj',
+  'О': 'O',  'о': 'o',
+  'П': 'P',  'п': 'p',
+  'Р': 'R',  'р': 'r',
+  'С': 'S',  'с': 's',
+  'Т': 'T',  'т': 't',
+  'Ќ': 'Kj', 'ќ': 'kj',
+  'У': 'U',  'у': 'u',
+  'Ф': 'F',  'ф': 'f',
+  'Х': 'H',  'х': 'h',
+  'Ц': 'C',  'ц': 'c',
+  'Ч': 'Ch', 'ч': 'ch',
+  'Џ': 'Dj', 'џ': 'dj',
+  'Ш': 'Sh', 'ш': 'sh'
+};
+
+/**
+ * Converts Macedonian Cyrillic to Latin ASCII.
+ * Existing Latin characters are left unchanged, so this also works with
+ * legacy users whose names are already stored in Latin script.
+ */
+const convertNameToLatin = (value) => {
+  if (!value) return value;
+
+  return Array.from(String(value))
+    .map((char) => cyrillicToLatin[char] || char)
+    .join('');
+};
+
 module.exports = {
-  convertNameToCyrillic
+  convertNameToCyrillic,
+  convertNameToLatin
 };

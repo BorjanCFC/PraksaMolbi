@@ -3,6 +3,8 @@ const Molba = require('./Molba');
 const Student = require('./Student');
 const Role = require('./Role');
 const UserRole = require('./UserRole');
+// MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1
+const AcademicPeriod = require('./AcademicPeriod');
 
 // User <-> Role M:N
 User.belongsToMany(Role, {
@@ -41,10 +43,23 @@ Molba.belongsTo(User, {
   as: 'student'
 });
 
+
+// AcademicPeriod <-> Molba
+AcademicPeriod.hasMany(Molba, {
+  foreignKey: 'academicPeriodId',
+  as: 'molbi'
+});
+
+Molba.belongsTo(AcademicPeriod, {
+  foreignKey: 'academicPeriodId',
+  as: 'academicPeriod'
+});
+
 module.exports = {
   User,
   Molba,
   Student,
   Role,
-  UserRole
+  UserRole,
+  AcademicPeriod
 };

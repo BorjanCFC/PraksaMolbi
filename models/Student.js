@@ -20,6 +20,13 @@ const Student = sequelize.define('Student', {
   smer: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  // MOLBI_STUDENT_REQUEST_NUMBERING_PDF_NAMES_V1
+  brojMolbi: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'broj_molbi'
   }
 }, {
   tableName: 'students',

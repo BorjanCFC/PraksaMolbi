@@ -17,6 +17,14 @@
           }; %>
           <% const displayRoleLabel = (viewer.role && roleLabelFallbackMap[viewer.role]) || ((typeof getRoleLabel === 'function' && viewer.role) ? getRoleLabel(viewer.role) : viewer.roleLabel); %>
           <% const isStaffRole = viewer.role === 'arhiva' || viewer.role === 'prodekan' || viewer.role === 'admin' || viewer.role === 'studentska_sluzhba'; %>
+          <!-- MOLBI_ACADEMIC_PERIOD_ARCHIVE_V1 -->
+          <!-- MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1 -->
+          <% if (viewer.role === 'admin') { %>
+            <a href="/dashboard/students" class="nav-link archive-nav-link students-nav-link">Студенти</a>
+          <% } %>
+          <% if (isStaffRole) { %>
+            <a href="/dashboard/archive" class="nav-link archive-nav-link">Архива на молби</a>
+          <% } %>
           <span class="nav-user">
             <% if (isStaffRole) { %>
               <% const emailNameParts = String(viewer.email || '').split('@')[0].split(/[._-]+/).filter(Boolean); %>

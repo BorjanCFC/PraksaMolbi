@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Детали за студент</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="/images/feitLogoBrowser.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header', { viewer, isImpersonating, getRoleLabel, convertNameToCyrillic }) %>
+
+  <!-- MOLBI_ARCHIVE_FILTERS_ADMIN_STUDENTS_V1 -->
+  <main class="container student-admin-detail-page">
+    <div class="student-detail-topbar">
+      <a href="/dashboard/students" class="btn btn-secondary">← Студенти</a>
+    </div>
+
+    <% if (success && success.length > 0) { %><div class="alert alert-success"><%= success %></div><% } %>
+    <% if (error && error.length > 0) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <div class="student-admin-detail-card">
+      <div class="student-admin-detail-heading">
+        <div>
+          <div class="detail-eyebrow">Детали за студент</div>
+          <h2><%= account.ime || '-' %> <%= account.prezime || '' %></h2>
+        </div>
+        <% if (account.brIndeks) { %><span class="student-index-pill"><%= account.brIndeks %></span><% } %>
+      </div>
+
+      <form action="/dashboard/students/<%= account.userId %>" method="POST" class="student-admin-edit-form">
+        <input type="hidden" name="csrfToken" value="<%= adminCsrfToken %>">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="studentIme">Име</label>
+            <input id="studentIme" name="ime" type="text" maxlength="100" value="<%= account.ime %>" required>
+          </div>
+          <div class="form-group">
+            <label for="studentPrezime">Презиме</label>
+            <input id="studentPrezime" name="prezime" type="text" maxlength="100" value="<%= account.prezime %>" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="studentEmail">Email</label>
+            <input id="studentEmail" type="text" value="<%= account.email %>" class="locked-input" disabled readonly>
+          </div>
+          <div class="form-group">
+            <label for="studentIndex">Бр. индекс</label>
+            <input id="studentIndex" type="text" value="<%= account.brIndeks || 'Не е утврден' %>" class="locked-input" disabled readonly>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="studentMajor">Насока</label>
+          <select id="studentMajor" name="smer" class="form-select" required>
+            <option value="">Изберете насока</option>
+            <% majorOptions.forEach((major) => { %>
+              <option value="<%= major %>" <%= account.smer === major ? 'selected' : '' %>><%= major %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="form-actions student-admin-detail-actions">
+          <a href="/dashboard/students" class="btn btn-secondary">Откажи</a>
+          <button type="submit" class="btn btn-primary">Зачувај промени</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>
