@@ -25,7 +25,8 @@ const {
 const {
   sendMolbaCreatedEmail,
   sendMolbaApprovedEmail,
-  sendMolbaRejectedEmail
+  sendMolbaRejectedEmail,
+  sendMolbaRevisionRequestedEmail
 } = require('../utils/emailService');
 
 // MOLBI_STUDENT_REQUEST_NUMBERING_PDF_NAMES_V1
@@ -5545,6 +5546,49 @@ exports.updateStatus =
       }
 
       await molba.save();
+
+      // MOLBI_ZABELESHKA_EMAIL_TRIGGER_V1
+      if (status === 'Забелешка') {
+        const studentUserId = molba.userId;
+        const molbaTitle = molba.naslov;
+        const revisionFeedback = cleanFeedback;
+
+        runBackgroundEmail(
+          'Molba revision requested',
+          async () => {
+            const studentUser = await User.findByPk(
+              studentUserId,
+              {
+                attributes: [
+                  'email',
+                  'ime',
+                  'prezime'
+                ]
+              }
+            );
+
+            if (
+              !studentUser ||
+              !studentUser.email
+            ) {
+              console.warn(
+                `[Controller] Molba revision requested: student email missing for userId=${studentUserId}`
+              );
+              return false;
+            }
+
+            const studentFullName =
+              `${studentUser.ime || ''} ${studentUser.prezime || ''}`.trim();
+
+            return sendMolbaRevisionRequestedEmail(
+              studentUser.email,
+              studentFullName,
+              molbaTitle,
+              revisionFeedback
+            );
+          }
+        );
+      }
 
       req.flash(
         'success',

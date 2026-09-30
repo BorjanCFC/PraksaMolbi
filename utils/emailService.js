@@ -369,8 +369,111 @@ const sendMolbaRejectedEmail = async (
   });
 };
 
+// MOLBI_ZABELESHKA_EMAIL_NOTIFICATION_V1
+/**
+ * Send email to the student when the vice-dean requests a revision.
+ * The note is escaped before it is included in the HTML message.
+ */
+const sendMolbaRevisionRequestedEmail = async (
+  studentEmail,
+  studentName,
+  molbaTitle,
+  feedback
+) => {
+  console.log(
+    `[EmailService] Preparing to send "molba revision requested" email to: ${studentEmail}`
+  );
+
+  const cyrillicName = convertNameToCyrillic(studentName);
+  const safeStudentName = escapeHtml(cyrillicName);
+  const safeMolbaTitle = escapeHtml(molbaTitle);
+  const safeFeedback = escapeHtml(feedback);
+
+  return sendMail({
+    to: studentEmail,
+    subject: 'Забелешка за вашата молба',
+    html: `
+      <div style="
+        max-width: 650px;
+        margin: 0 auto;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #333333;
+        line-height: 1.6;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        overflow: hidden;
+      ">
+
+        <div style="
+          background-color: #f4f6f8;
+          padding: 24px 30px;
+          border-bottom: 1px solid #e5e5e5;
+        ">
+          <h2 style="
+            margin: 0;
+            font-size: 22px;
+            color: #222222;
+          ">
+            Забелешка за вашата молба
+          </h2>
+        </div>
+
+        <div style="padding: 30px;">
+          <p>Почитуван/а ${safeStudentName},</p>
+
+          <p>
+            Ве известуваме дека при разгледувањето на Вашата молба со наслов
+            <strong>„${safeMolbaTitle}“</strong>, Продеканот за настава има
+            доставено забелешка и потребно е да направите соодветна измена.
+          </p>
+
+          <div style="
+            margin: 24px 0;
+            padding: 18px 20px;
+            background-color: #f7f7f7;
+            border-left: 4px solid #0b5ea8;
+            border-radius: 4px;
+          ">
+            <strong>Забелешка:</strong>
+            <p style="margin-bottom: 0; white-space: pre-wrap;">${safeFeedback}</p>
+          </div>
+
+          <p>
+            Ве молиме најавете се на платформата за електронско поднесување
+            на молби, отворете ја молбата и направете ги потребните измени.
+          </p>
+
+          <p>
+            По зачувувањето на измените, молбата повторно ќе биде достапна
+            за понатамошна обработка.
+          </p>
+
+          <p style="margin-top: 30px;">
+            Со почит,<br/>
+            <strong>Студентска служба</strong><br/>
+            Факултет за електротехника и информациски технологии – Скопје
+          </p>
+        </div>
+
+        <div style="
+          background-color: #f8f8f8;
+          padding: 15px 30px;
+          font-size: 12px;
+          color: #777777;
+          border-top: 1px solid #e5e5e5;
+        ">
+          Оваа порака е автоматски генерирана од системот за електронско
+          поднесување и обработка на студентски молби.
+        </div>
+
+      </div>
+    `
+  });
+};
+
 module.exports = {
   sendMolbaCreatedEmail,
   sendMolbaApprovedEmail,
-  sendMolbaRejectedEmail
+  sendMolbaRejectedEmail,
+  sendMolbaRevisionRequestedEmail
 };
