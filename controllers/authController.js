@@ -1607,19 +1607,26 @@ exports.logout = (req, res) => {
     ? '/admin-login'
     : '/login';
 
+  const finishLogout = () => {
+    res.clearCookie('connect.sid', { path: '/' });
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    return res.redirect(303, redirectPath);
+  };
+
   if (!req.session) {
-    res.clearCookie('connect.sid');
-    res.set('Cache-Control', 'no-store');
-    return res.redirect(redirectPath);
+    return finishLogout();
   }
 
   return req.session.destroy((error) => {
     if (error) {
       console.error('Logout session error:', error);
-      return res.status(500).send('Одјавата не успеа. Обидете се повторно.');
+      return res.status(500).send('Logout failed. Please try again.');
     }
-    res.clearCookie('connect.sid');
-    res.set('Cache-Control', 'no-store');
-    return res.redirect(redirectPath);
+
+    return finishLogout();
   });
 };

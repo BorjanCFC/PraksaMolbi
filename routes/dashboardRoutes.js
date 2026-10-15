@@ -10,7 +10,13 @@ const staffTipByRole = {
   prodekan: 'Prodekan',
   arhiva: 'Arhiva'
 };
+// MOLBI_AUTHENTICATED_NO_CACHE_V1
 router.use('/dashboard', async (req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
   const user = req.session && req.session.user;
   if (!user || !user.role || user.role === 'student') return next();
   const tip = staffTipByRole[user.role];
